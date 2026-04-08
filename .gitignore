@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Cache do dashboard (gerado em runtime)
+cache/
+
+# Dados processados — copie manualmente após clonar
+processed/*.parquet
+processed/sih_sim/*.parquet
+processed/sih_sim/geojson_rm.json
+
+# Dados brutos Excel/CSV
+data/*.xlsx
+data/*.csv
+
+# Mapas HTML gerados
+mapa_eventos/*.html
+
+# Variáveis de ambiente
+.env
+.env.*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
