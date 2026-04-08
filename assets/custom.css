@@ -352,10 +352,154 @@ h3, h4, h5, .text-center.my-4 {
     display: none;
 }
 
-@media (max-width: 900px) {
-    .team-card { width: 220px; height: 320px; }
-    .card-far-left, .card-far-right { transform: scale(0.5); opacity: 0.1; }
-    .card-left, .card-right { transform: scale(0.7); opacity: 0.3; }
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE & TABLET RESPONSIVE
+   Breakpoints Bootstrap: xs<576 | sm≥576 | md≥768 | lg≥992 | xl≥1200
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Dispositivos touch: alvos mínimos de 44px e sem hover fixo ─────────── */
+@media (hover: none) {
+    .kpi-card:hover  { transform: none; }
+    .calendar-day:hover { transform: none; box-shadow: none; }
+    .btn { min-height: 44px; }
+    .nav-tabs .nav-link { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+    .geocalor-nav-link { padding: 0.7rem 1rem !important; }
+}
+
+/* ── Tablet (≤991px): cards de equipe viram carrossel horizontal rolável ── */
+@media (max-width: 991px) {
+    .team-cards-container {
+        height: auto !important;
+        min-height: 400px;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        padding: 1rem 0.75rem !important;
+        gap: 0.75rem;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+    }
+    .team-card {
+        position: relative !important;
+        width: 260px !important;
+        height: auto !important;
+        min-height: 370px !important;
+        transform: none !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        flex-shrink: 0 !important;
+        scroll-snap-align: center;
+    }
+    /* Mostra todos os cards (callbacks escondem por classe .hidden) */
+    .team-card.hidden { display: flex !important; }
+    /* Remove distinção visual entre posições */
+    .card-far-left, .card-far-right,
+    .card-left, .card-right,
+    .card-center { box-shadow: 0 4px 16px rgba(0,0,0,0.10) !important; }
+}
+
+/* ── Mobile (≤767px): ajustes gerais de espaçamento e tipografia ─────────── */
+@media (max-width: 767px) {
+
+    /* h3/h4/h5: fix display:inline-block que vaza em telas estreitas */
+    h3, h4, h5, .text-center.my-4 {
+        display: block !important;
+        max-width: 100% !important;
+        word-break: break-word !important;
+        font-size: 1rem !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+    h2 { font-size: 1.25rem !important; }
+
+    /* Navbar collapse: maior espaçamento interno */
+    .geocalor-topnav .navbar-collapse { padding: 0.5rem 0; }
+    .geocalor-nav-link { display: block; text-align: center; margin: 0.15rem 0; }
+
+    /* KPI cards: reduz padding e fonte em telas pequenas */
+    .kpi-card    { min-width: 88px; padding: 0.65rem 0.6rem; }
+    .kpi-value   { font-size: 1.25rem; }
+    .kpi-label   { font-size: 0.62rem; }
+    .kpi-icon    { font-size: 1.1rem; }
+
+    /* Cabeçalho dos chart-cards */
+    .geo-map-section-header {
+        font-size: 0.95rem;
+        padding: 0.6rem 0.8rem;
+    }
+
+    /* Banner SIH/SIM */
+    .sihsim-section-banner { font-size: 0.9rem; padding: 0.6rem 0.9rem; }
+
+    /* Corpo do card de gráfico: menos padding */
+    .chart-card-body { padding: 0.65rem !important; }
+
+    /* Nav tabs SIH/SIM: rolagem horizontal sem quebrar */
+    .nav-tabs {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-tabs .nav-link {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.82rem !important;
+        white-space: nowrap;
+    }
+
+    /* Calendário: dias menores para caber na tela */
+    .calendar-day { width: 32px !important; height: 32px !important; font-size: 0.72rem; margin: 1px; }
+    .calendar-weekday { font-size: 0.7rem; }
+    .calendar-header  { font-size: 0.85rem; }
+
+    /* Legenda do calendário */
+    .calendar-legend { gap: 0.4rem 0.75rem; padding: 0.4rem 0.6rem; }
+    .calendar-legend-item { font-size: 0.75rem; }
+
+    /* Logos */
+    .logo-img { max-height: 72px; max-width: 140px; margin: 10px 0; }
+
+    /* Marca do range slider: fonte menor */
+    .rc-slider-mark-text { font-size: 0.62rem !important; }
+
+    /* Modebar do Plotly: diminui um pouco */
+    .js-plotly-plot .plotly .modebar {
+        transform: scale(0.82);
+        transform-origin: top right;
+    }
+
+    /* Padding lateral do dashboard */
+    .dashboard-main { padding-left: 0.35rem !important; padding-right: 0.35rem !important; }
+
+    /* Section heading */
+    .section-heading { font-size: 0.95rem; }
+
+    /* Cards de equipe em mobile (≤767px): cards menores no carrossel */
+    .team-card { width: 230px !important; min-height: 330px !important; padding: 14px !important; }
+}
+
+/* ── Mobile muito pequeno (≤400px) ────────────────────────────────────────── */
+@media (max-width: 400px) {
+    h3, h4, h5 { font-size: 0.9rem !important; }
+    .kpi-card   { min-width: 76px; }
+    .kpi-value  { font-size: 1.05rem; }
+    .geo-map-section-header { font-size: 0.85rem; }
+    .team-card  { width: 200px !important; }
+    .calendar-day { width: 27px !important; height: 27px !important; font-size: 0.65rem; }
+}
+
+/* ── Garante que gráficos Plotly não ultrapassem o container ────────────── */
+.js-plotly-plot, .plot-container { max-width: 100% !important; }
+.dash-graph { overflow: hidden; }
+
+/* ── Apoiadores: logo menor em mobile ───────────────────────────────────── */
+@media (max-width: 576px) {
+    .apoiador-logo { max-height: 48px !important; max-width: 110px !important; }
 }
 
 /* ── Legendas do calendário de ondas de calor ──────────────────────────── */

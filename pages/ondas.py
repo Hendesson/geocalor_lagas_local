@@ -85,7 +85,7 @@ def layout_ondas(app, df, cidades, anos):
                     ],
                     fa_icon="fas fa-chart-pie",
                 ),
-            ], width=6),
+            ], xs=12, md=6),
 
             dbc.Col([
                 chart_card(
@@ -97,14 +97,14 @@ def layout_ondas(app, df, cidades, anos):
                                    [{"label": c, "value": c} for c in cidades],
                                    cidades[0] if cidades else None,
                                    label="Cidade"),
-                                width=6,
+                                xs=12, sm=6,
                             ),
                             dbc.Col(
                                 dd("ano-hw",
                                    [{"label": str(a), "value": a} for a in anos if a <= 2023],
                                    min(anos[-1], 2023) if anos else None,
                                    label="Ano"),
-                                width=6,
+                                xs=12, sm=6,
                             ),
                         ]),
                         dcc.Loading(dcc.Graph(id="grafico-polar"), type="circle"),
@@ -115,7 +115,7 @@ def layout_ondas(app, df, cidades, anos):
                     ],
                     fa_icon="fas fa-calendar-alt",
                 ),
-            ], width=6),
+            ], xs=12, md=6),
         ]),
 
         html.Br(),
@@ -520,7 +520,7 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
             legend,
             dbc.Row([
                 dbc.Col(create_calendar_component(dias_calor, ano, mes, cidade),
-                        width=4, className="mb-4")
+                        xs=12, sm=6, lg=4, className="mb-4")
                 for mes in range(1, 13)
             ])
         ])
