@@ -10,7 +10,7 @@ import pandas as pd
 import calendar
 from datetime import date
 
-from components import chart_card, dd
+from components import chart_card, info_card, dd
 
 
 def chart_note(texto: str) -> html.P:
@@ -34,7 +34,8 @@ def nota_tecnica_card() -> dbc.Card:
                 html.Div([
                     html.Strong("Classificação"),
                     html.P("Baixa Intensidade • Severa • Extrema — "
-                           "definidas por desvios-padrão (σ) do EHF histórico.",
+                           "definidas a partir de múltiplos do percentil 85 (EHF85) "
+                           "de todos os valores positivos do EHF.",
                            className="small text-muted mb-3")
                 ]),
             ]),
@@ -66,6 +67,22 @@ def layout_ondas(app, df, cidades, anos):
 
         html.Br(),
         dbc.Row([dbc.Col(nota_tecnica_card(), width=12)]),
+
+        dbc.Row([
+            dbc.Col(
+                info_card(
+                    "",
+                    html.P(
+                        "A caracterização do comportamento das ondas de calor preconizou a "
+                        "identificação dos eventos, do período do ano que os eventos mais acontecem "
+                        "e da intensidade.",
+                        className="mb-0 text-muted",
+                    ),
+                    fa_icon="fas fa-fire",
+                ),
+                width=12,
+            ),
+        ]),
 
         dbc.Row([
             dbc.Col([
@@ -290,6 +307,37 @@ def layout_ondas(app, df, cidades, anos):
 
         html.Hr(className="my-5"),
 
+        dbc.Row([
+            dbc.Col(
+                info_card(
+                    "",
+                    html.P(
+                        "A caracterização do comportamento das ondas de calor preconizou a "
+                        "identificação dos eventos, do período do ano que os eventos mais acontecem "
+                        "e da intensidade.",
+                        className="mb-0 text-muted",
+                    ),
+                    fa_icon="fas fa-fire",
+                ),
+                width=12,
+            ),
+        ]),
+
+        dbc.Row([
+            dbc.Col(
+                info_card(
+                    "",
+                    html.P(
+                        "O mapa abaixo sintetiza o comportamento geral das ondas de calor "
+                        "por cada faixa de intensidade.",
+                        className="mb-0 text-muted",
+                    ),
+                    fa_icon="fas fa-map-pin",
+                ),
+                width=12,
+            ),
+        ]),
+
         dbc.Card([
             html.Div(
                 [html.I(className="fas fa-map-pin me-2"),
@@ -316,19 +364,36 @@ def layout_ondas(app, df, cidades, anos):
             ]),
         ], className="mb-4 shadow-sm border-0"),
 
+        dbc.Row([
+            dbc.Col(
+                info_card(
+                    "",
+                    html.P(
+                        "Como poucos eventos são classificados como severos e extremos, "
+                        "nós consideramos a soma dessas duas classificações como as ondas de calor "
+                        "de maior intensidade. O mapa abaixo apresenta o comportamento apenas desses "
+                        "eventos mais intensos, assim você pode comparar com o mapa acima.",
+                        className="mb-0 text-muted",
+                    ),
+                    fa_icon="fas fa-map-marked-alt",
+                ),
+                width=12,
+            ),
+        ]),
+
         dbc.Card([
             html.Div(
                 [
                     html.I(className="fas fa-map-marked-alt me-2"),
-                    "Mapa interativo de eventos extremos",
+                    "Mapa interativo das ondas de calor de maior intensidade",
                 ],
                 className="geo-map-section-header",
             ),
             dbc.CardBody([
                 html.P(
-                    "Visualização geoespacial dos eventos extremos de temperatura "
-                    "nas Regiões Metropolitanas analisadas. Use os controles do mapa "
-                    "para explorar diferentes regiões e períodos.",
+                    "Visualização geoespacial das ondas de calor de maior intensidade "
+                    "(severas e extremas) nas Regiões Metropolitanas analisadas. Use os "
+                    "controles do mapa para explorar diferentes regiões e períodos.",
                     className="text-muted small mb-3",
                 ),
                 html.Iframe(

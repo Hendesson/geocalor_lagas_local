@@ -25,9 +25,17 @@ NOTA_TEMPERATURAS = r"""<!DOCTYPE html>
          style="max-height:70px;max-width:140px;object-fit:contain;">
     <img src="/assets/sistemas_alerta/images/geocalorLogo.png" alt="GeoCalor"
          style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/unb.png" alt="UnB"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/fiocruz.png" alt="Fiocruz"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/ufrj_logo.png" alt="UFRJ"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/lmi_logo.png" alt="LMI-Sentinela"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
   </div>
   <h1>Nota Técnica — Análise de Temperaturas Diárias</h1>
-  <p><em>Projeto GeoCalor | LAGAS / UnB &amp; Fiocruz/OCS</em></p>
+  <p><em>Projeto GeoCalor | LAGAS / UnB, Fiocruz/OCS, LASA-UFRJ &amp; LMI-Sentinela</em></p>
 
   <h2>1. Fontes de Dados</h2>
   <p>Os dados meteorológicos são provenientes de estações do <strong>INMET</strong>
@@ -37,33 +45,40 @@ NOTA_TEMPERATURAS = r"""<!DOCTYPE html>
   (<code>tempMed</code>), temperatura mínima (<code>tempMin</code>) e umidade relativa
   (<code>HumidadeMed</code>), todas em base diária.</p>
 
-  
-  <h2>4. Amplitude Térmica Diária</h2>
+  <h2>2. Tratamento de Lacunas de Dados</h2>
+  <p>As lacunas de dados foram preenchidas calculando a temperatura média diária a partir
+  da média entre o valor máximo e o valor mínimo do dia (<code>(tempMax + tempMin) / 2</code>),
+  ao invés de utilizar a temperatura média compensada fornecida diretamente pelo INMET ou ICEA.</p>
+
+  <h2>3. Amplitude Térmica Diária</h2>
   <p>Calculada como a diferença entre a temperatura máxima e mínima do dia:</p>
   <div class="formula">Amplitude = tempMax − tempMin</div>
   <p>A linha tracejada nos gráficos representa a <strong>média móvel de 30 dias</strong>,
   utilizada para suavizar a variabilidade diária e evidenciar tendências sazonais.</p>
 
-  <h2>5. Anomalia de Temperatura Mensal</h2>
-  <p>A anomalia é calculada como o desvio da temperatura média mensal em relação à
-  <strong>climatologia histórica</strong> do próprio período analisado:</p>
+  <h2>4. Anomalia de Temperatura Mensal</h2>
+  <p>A anomalia é calculada a partir da média diária: o valor do dia específico menos a
+  média daquele dia para todos os anos. Por exemplo, a anomalia do dia 01/01/2000 é a
+  temperatura máxima desse dia, menos a média das temperaturas máximas de todos os dias
+  01/01 de todos os anos.</p>
   <div class="formula">
-    Anomalia<sub>m,a</sub> = T̄<sub>m,a</sub> − T̄<sub>m,histórico</sub>
+    Anomalia<sub>d</sub> = T<sub>d</sub> − T̄<sub>dia-histórico</sub>
   </div>
   <p>Barras <span style="color:#c0392b"><strong>vermelhas</strong></span> indicam meses
   com temperatura acima da média histórica; barras
   <span style="color:#2b7eb3"><strong>azuis</strong></span> indicam meses abaixo.</p>
 
-  <h2>6. Limitações</h2>
+  <h2>5. Limitações</h2>
   <ul>
     <li>Dados de estações pontuais (não gridados), podendo não representar
     toda a variabilidade espacial da RM.</li>
-    <li>Lacunas temporais em algumas séries foram tratadas por interpolação linear.</li>
+    <li>Lacunas temporais em algumas séries foram preenchidas calculando a média diária
+    a partir do valor máximo e mínimo, ao invés da média compensada fornecida pelo INMET e ICEA.</li>
     <li>O período pós-2020 pode conter dados parcialmente revisados pelo INMET.</li>
   </ul>
 
   <p style="margin-top:3rem; font-size:0.85rem; color:#888;">
-    Gerado pelo Dashboard GeoCalor — LAGAS/UnB &amp; OCS/Fiocruz<br>
+    Gerado pelo Dashboard GeoCalor — LAGAS/UnB, Fiocruz/OCS, LASA-UFRJ &amp; LMI-Sentinela<br>
     Para citar: utilize as referências bibliográficas disponíveis no dashboard.
   </p>
 
@@ -103,9 +118,17 @@ NOTA_ONDAS = r"""<!DOCTYPE html>
          style="max-height:70px;max-width:140px;object-fit:contain;">
     <img src="/assets/sistemas_alerta/images/geocalorLogo.png" alt="GeoCalor"
          style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/unb.png" alt="UnB"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/fiocruz.png" alt="Fiocruz"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/ufrj_logo.png" alt="UFRJ"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/lmi_logo.png" alt="LMI-Sentinela"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
   </div>
   <h1>Nota Técnica — Ondas de Calor e Índice EHF</h1>
-  <p><em>Projeto GeoCalor | LAGAS / UnB &amp; Fiocruz/OCS</em></p>
+  <p><em>Projeto GeoCalor | LAGAS / UnB, Fiocruz/OCS, LASA-UFRJ &amp; LMI-Sentinela</em></p>
 
   <h2>1. Definição de Onda de Calor</h2>
   <p>Neste projeto, uma <strong>Onda de Calor (OC)</strong> é definida como um período
@@ -131,12 +154,14 @@ NOTA_ONDAS = r"""<!DOCTYPE html>
   do dia <em>i</em>.</p>
 
   <h2>3. Classificação por Intensidade</h2>
+  <p>As classes de intensidade são definidas a partir de múltiplos do percentil 85
+  de todos os valores positivos do EHF (denominado <strong>EHF85</strong>):</p>
   <table>
-    <thead><tr><th>Classificação</th><th>Critério (EHF)</th>
+    <thead><tr><th>Classificação</th><th>Critério (EHF)</th></tr></thead>
     <tbody>
-      <tr><td>Baixa Intensidade</td><td>0 &lt; EHF ≤ 1σ</td>
-      <tr><td>Severa</td><td>1σ &lt; EHF ≤ 3σ</td>
-      <tr><td>Extrema</td><td>EHF &gt; 3σ</td>
+      <tr><td>Baixa Intensidade</td><td>0 &lt; EHF ≤ EHF85</td></tr>
+      <tr><td>Severa</td><td>EHF85 &lt; EHF ≤ 3 × EHF85</td></tr>
+      <tr><td>Extrema</td><td>EHF &gt; 3 × EHF85</td></tr>
     </tbody>
   </table>
 
@@ -198,10 +223,18 @@ NOTA_SIH_SIM = r"""<!DOCTYPE html>
          style="max-height:70px;max-width:140px;object-fit:contain;">
     <img src="/assets/sistemas_alerta/images/geocalorLogo.png" alt="GeoCalor"
          style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/unb.png" alt="UnB"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/fiocruz.png" alt="Fiocruz"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/ufrj_logo.png" alt="UFRJ"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
+    <img src="/assets/lmi_logo.png" alt="LMI-Sentinela"
+         style="max-height:70px;max-width:140px;object-fit:contain;">
   </div>
 
   <h1>Nota Técnica — Sistema de Informações SIH/SIM</h1>
-  <p><em>Projeto GeoCalor | LAGAS / UnB &amp; Fiocruz/OCS</em></p>
+  <p><em>Projeto GeoCalor | LAGAS / UnB, Fiocruz/OCS, LASA-UFRJ &amp; LMI-Sentinela</em></p>
 
   <h2>1. Fontes de Dados</h2>
   <p>Esta página utiliza os microdados dos seguintes sistemas do DATASUS/Ministério da Saúde:</p>
@@ -339,7 +372,7 @@ NOTA_SIH_SIM = r"""<!DOCTYPE html>
   </ul>
 
   <p style="margin-top:3rem; font-size:0.85rem; color:#888;">
-    Gerado pelo Dashboard GeoCalor — LAGAS/UnB &amp; OCS/Fiocruz<br>
+    Gerado pelo Dashboard GeoCalor — LAGAS/UnB, Fiocruz/OCS, LASA-UFRJ &amp; LMI-Sentinela<br>
     Para citar: utilize as referências bibliográficas disponíveis no dashboard.
   </p>
 

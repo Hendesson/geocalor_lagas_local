@@ -15,17 +15,10 @@ env/
 # Cache do dashboard (gerado em runtime)
 cache/
 
-# Dados processados — copie manualmente após clonar
-processed/*.parquet
-processed/sih_sim/*.parquet
-processed/sih_sim/geojson_rm.json
-
-# Dados brutos Excel/CSV
-data/*.xlsx
-data/*.csv
-
-# Mapas HTML gerados
-mapa_eventos/*.html
+# Dados locais — solicite ao Hendesson
+processed/
+mapa_eventos/
+data/
 
 # Variáveis de ambiente
 .env

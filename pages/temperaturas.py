@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.graph_objs as go
 
 from config import YEAR_MIN, YEAR_MAX
-from components import chart_card, dd
+from components import chart_card, info_card, dd
 
 
 def chart_note(texto: str) -> html.P:
@@ -128,6 +128,18 @@ def layout_temperaturas(app, df, cidades, anos):
             dbc.Col([
                 html.Img(src=app.get_asset_url("geocalor.png"), className="logo-img"),
                 html.H2("Caracterização Climática das RMB", className="text-center my-4"),
+                info_card(
+                    "",
+                    html.P(
+                        "Foi feita uma caracterização climática das regiões metropolitanas estudadas "
+                        "no Projeto GeoCalor a partir de duas variáveis principais, a temperatura e "
+                        "a umidade. Nós identificamos inicialmente o comportamento geral das temperaturas "
+                        "máximas, médias e mínimas, bem como da umidade relativa do ar média. Você pode ver "
+                        "isso abaixo e filtrar os dados por ano e por cidade.",
+                        className="mb-0 text-muted",
+                    ),
+                    fa_icon="fas fa-info-circle",
+                ),
             ], width=12),
         ], align="center", className="text-center"),
 
@@ -197,6 +209,23 @@ def layout_temperaturas(app, df, cidades, anos):
                     fa_icon="fas fa-tint",
                 ),
             ], xs=12, lg=7),
+        ]),
+
+        dbc.Row([
+            dbc.Col(
+                info_card(
+                    "",
+                    html.P(
+                        "A partir dos dados base obtidos do INMET ou do ICEA, nós identificamos "
+                        "também as amplitudes térmicas e as anomalias de temperatura, pois são "
+                        "importantes indicadores climáticos para servirem de base das investigações "
+                        "futuras sobre ondas de calor.",
+                        className="mb-0 text-muted",
+                    ),
+                    fa_icon="fas fa-chart-area",
+                ),
+                width=12,
+            ),
         ]),
 
         dbc.Row([
