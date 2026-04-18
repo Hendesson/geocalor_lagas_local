@@ -9,10 +9,10 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import Input, Output, dcc, html
+from dash import Input, Output, State, dcc, html
 import dash_bootstrap_components as dbc
 
-from components import chart_card, dd
+from components import chart_card, dd, dl_btn
 from config import PRIMARY, TEAL, GREEN, ORANGE, RED, DARK_RED, WHITE, LAYOUT_BASE
 import data_sih_sim as ds
 
@@ -66,12 +66,13 @@ def layout_sih_sim(app) -> dbc.Container:
     _rm_init   = _rms_init[0] if _rms_init else None
     _anos_init = ds.anos_disponiveis(_SISTEMA_DEFAULT, _CAUSA_DEFAULT, _rm_init) if _rm_init else []
     _ano_init  = _anos_init[-1] if _anos_init else None
+    _anos_opts = [{"label": str(a), "value": a} for a in _anos_init]
 
     return dbc.Container(
         [
             # ── Título ────────────────────────────────────────────────────
             dbc.Row(dbc.Col(
-                html.H2("Sistema de Informações SIH/SIM", className="text-center my-4"),
+                html.H2("Perfil epidemiológico das Regiões Metropolitanas", className="text-center my-4"),
                 width=12,
             )),
 
@@ -117,7 +118,7 @@ def layout_sih_sim(app) -> dbc.Container:
                         tab_id="sihsim-tab-info",
                     ),
                     dbc.Tab(
-                        _tab_mapa(_anos_init, _ano_init),
+                        _tab_mapa(_anos_opts, _ano_init),
                         label="Mapa Coroplético",
                         label_style={"fontWeight": "700"},
                         tab_id="sihsim-tab-mapa",
@@ -187,7 +188,8 @@ def _tab_infograficos() -> dbc.Container:
                     dbc.Col(chart_card("Raça/cor",
                                        [dcc.Loading(dcc.Graph(id="sihsim-g3"), type="circle"),
                                         _nota("Distribuição por raça/cor autodeclarada, "
-                                              "conforme classificação IBGE/DATASUS.")],
+                                              "conforme classificação IBGE/DATASUS."),
+                                        dl_btn("sihsim-g3", "raca_cor")],
                                        fa_icon="fas fa-users"),
                             xs=12, md=4, className="mb-3"),
                 ],
@@ -205,7 +207,8 @@ def _tab_infograficos() -> dbc.Container:
                      _nota("Contagem absoluta de internações/óbitos por mês e ano. "
                            "Cores mais escuras = maior volume. Identifica sazonalidade "
                            "(ex.: picos respiratórios no inverno) e tendências de longo prazo. "
-                           "Valores são contagens brutas, não taxas populacionais.")],
+                           "Valores são contagens brutas, não taxas populacionais."),
+                     dl_btn("sihsim-g4", "sazonalidade_mensal")],
                     fa_icon="fas fa-th",
                 ),
                 width=12, className="mb-3",
@@ -219,14 +222,16 @@ def _tab_infograficos() -> dbc.Container:
                                         _nota("Taxa anual ajustada pela população da RM. "
                                               "Permite comparar RMs de tamanhos diferentes e "
                                               "identificar tendências independente do crescimento "
-                                              "populacional.")],
+                                              "populacional."),
+                                        dl_btn("sihsim-g5", "taxa_anual")],
                                        fa_icon="fas fa-chart-bar"),
                             xs=12, md=6, className="mb-3"),
                     dbc.Col(chart_card("Internações/óbitos por sexo",
                                        [dcc.Loading(dcc.Graph(id="sihsim-g6"), type="circle"),
                                         _nota("Contagem absoluta por sexo ao longo dos anos. "
                                               "Evidencia diferenças no padrão de adoecimento e "
-                                              "mortalidade entre homens e mulheres.")],
+                                              "mortalidade entre homens e mulheres."),
+                                        dl_btn("sihsim-g6", "internacoes_por_sexo")],
                                        fa_icon="fas fa-venus-mars"),
                             xs=12, md=6, className="mb-3"),
                 ],
@@ -239,7 +244,8 @@ def _tab_infograficos() -> dbc.Container:
                            [dcc.Loading(dcc.Graph(id="sihsim-g7"), type="circle"),
                             _nota("Distribuição proporcional por faixa etária. "
                                   "Identifica os grupos mais afetados pelas doenças "
-                                  "cardiovasculares e respiratórias na população da RM.")],
+                                  "cardiovasculares e respiratórias na população da RM."),
+                            dl_btn("sihsim-g7", "distribuicao_faixa_etaria")],
                            fa_icon="fas fa-baby"),
                 width=12, className="mb-3",
             )),
@@ -255,6 +261,7 @@ def _dyn_card(title_id: str, graph_id: str, fa_icon: str, note_id: str = "") -> 
     if note_id:
         body_children.append(html.P(id=note_id, className="text-muted small mt-2 mb-0",
                                     style={"fontStyle": "italic"}))
+    body_children.append(dl_btn(graph_id))
     return html.Div(
         className="chart-card shadow-sm border-0 mb-4",
         children=[
@@ -268,9 +275,12 @@ def _dyn_card(title_id: str, graph_id: str, fa_icon: str, note_id: str = "") -> 
     )
 
 
-def _tab_mapa(anos_init: list, ano_init) -> dbc.Container:
+def _tab_mapa(anos_opts: list, ano_init) -> dbc.Container:
+    # Exclui "all" do dropdown — modo "todos os anos" é ativado pelo botão dedicado
+    anos_opts_clean = [o for o in anos_opts if o["value"] != "all"]
     return dbc.Container(
         [
+            dcc.Store(id="sihsim-mapa-modo", data="single"),
             dbc.Row(dbc.Col(
                 dbc.Card(
                     [
@@ -281,16 +291,32 @@ def _tab_mapa(anos_init: list, ano_init) -> dbc.Container:
                         dbc.CardBody(
                             dbc.Row(
                                 [
-                                    dbc.Col(
-                                        dd("sihsim-mapa-ano",
-                                           [{"label": str(a), "value": a} for a in anos_init],
-                                           ano_init, label="Ano"),
-                                        xs=12, md=4,
-                                    ),
+                                    dbc.Col([
+                                        html.Label("Ano", className="small fw-semibold text-muted mb-1 d-block"),
+                                        dcc.Dropdown(
+                                            id="sihsim-mapa-ano",
+                                            options=anos_opts_clean,
+                                            value=ano_init,
+                                            clearable=False,
+                                            disabled=False,
+                                            style={"minWidth": "140px"},
+                                        ),
+                                    ], xs=12, md=4),
+                                    dbc.Col([
+                                        html.Label("Série histórica",
+                                                   className="small fw-semibold text-muted mb-1 d-block"),
+                                        html.Button(
+                                            [html.I(className="fas fa-layer-group me-2"),
+                                             "Ver todos os anos"],
+                                            id="sihsim-mapa-all-btn",
+                                            className="btn btn-outline-primary fw-bold w-100",
+                                            n_clicks=0,
+                                        ),
+                                    ], xs=12, md=4),
                                     dbc.Col(
                                         html.Div(id="sihsim-mapa-aviso",
                                                  className="text-muted small mt-4"),
-                                        xs=12, md=8,
+                                        xs=12, md=4,
                                     ),
                                 ],
                                 className="g-3",
@@ -307,8 +333,16 @@ def _tab_mapa(anos_init: list, ano_init) -> dbc.Container:
                     [
                         html.Div(id="sihsim-mapa-titulo", className="text-muted small mb-2"),
                         dcc.Loading(
-                            dcc.Graph(id="sihsim-mapa-graph", style={"height": "580px"}),
+                            html.Div(id="sihsim-mapa-container", style={"minHeight": "200px"}),
                             type="circle",
+                        ),
+                        html.Button(
+                            [html.I(className="fas fa-download me-1"), "Baixar PNG"],
+                            className="btn-download-asset mt-2",
+                            **{
+                                "data-mapa-download": "sihsim-mapa-container",
+                                "data-mapa-filename": "mapa_taxa_municipios",
+                            },
                         ),
                     ],
                     fa_icon="fas fa-map",
@@ -349,6 +383,30 @@ def register_callbacks_sih_sim(app) -> None:
         anos = ds.anos_disponiveis(sistema or "SIH", causa or "CARDIOVASCULAR", rm)
         opts = [{"label": str(a), "value": a} for a in anos]
         return opts, (anos[-1] if anos else None)
+
+    @app.callback(
+        Output("sihsim-mapa-modo",    "data"),
+        Output("sihsim-mapa-all-btn", "className"),
+        Output("sihsim-mapa-ano",     "disabled"),
+        Input("sihsim-mapa-all-btn",  "n_clicks"),
+        Input("sihsim-rm",            "value"),
+        Input("sihsim-sistema",       "value"),
+        Input("sihsim-causa",         "value"),
+        State("sihsim-mapa-modo",     "data"),
+        prevent_initial_call=True,
+    )
+    def _toggle_modo(n_all, rm, sistema, causa, modo_atual):
+        from dash import ctx
+        if ctx.triggered_id == "sihsim-mapa-all-btn":
+            novo = "all" if modo_atual != "all" else "single"
+        else:
+            novo = "single"
+        btn_cls = (
+            "btn btn-primary fw-bold w-100"
+            if novo == "all"
+            else "btn btn-outline-primary fw-bold w-100"
+        )
+        return novo, btn_cls, (novo == "all")
 
     @app.callback(
         Output("sihsim-g1-title", "children"),
@@ -441,8 +499,7 @@ def register_callbacks_sih_sim(app) -> None:
         if df3.empty:
             g3 = _empty("Sem dados de raça/cor")
         else:
-            df3 = df3.copy()
-            df3["lbl"] = df3["pct"].round(1).astype(str) + "%"
+            df3 = df3.assign(lbl=(df3["pct"].round(1).astype(str) + "%"))
             g3 = px.bar(df3, x="pct", y="RACA_COR", orientation="h",
                         labels={"pct": "Percentual (%)", "RACA_COR": ""}, text="lbl")
             g3.update_traces(textposition="outside", marker_color=GREEN)
@@ -513,8 +570,7 @@ def register_callbacks_sih_sim(app) -> None:
         if df7.empty:
             g7 = _empty("Sem dados de faixa etária")
         else:
-            df7 = df7.copy()
-            df7["lbl"] = df7["pct"].round(1).astype(str) + "%"
+            df7 = df7.assign(lbl=(df7["pct"].round(1).astype(str) + "%"))
             g7 = px.bar(df7, x="pct", y="FAIXA_ETARIA", orientation="h",
                         labels={"pct": "Percentual (%)", "FAIXA_ETARIA": "Faixa etária"}, text="lbl")
             g7.update_traces(textposition="outside", marker_color=ORANGE)
@@ -523,93 +579,200 @@ def register_callbacks_sih_sim(app) -> None:
 
         return title1, title2, note1, note2, g1, g2, g3, g4, g5, g6, g7
 
+    def _build_choropleth_svg(taxa_df, geojson, all_codes,
+                              range_min=None, range_max=None, height=580,
+                              var_label="Taxa por 1.000 hab.") -> go.Figure:
+        """
+        Mapa coroplético SVG (go.Choropleth) com duas camadas:
+          1) fundo cinza — todos os municípios da RM, incluindo sem dados
+          2) dados coloridos — municípios com taxa disponível
+        Usa fitbounds="locations" para zoom automático correto por RM.
+        Escala de cores global (range_min/range_max) para comparação entre anos.
+        """
+        if taxa_df["COD_MUN6"].dtype != object:
+            taxa_df = taxa_df.assign(COD_MUN6=taxa_df["COD_MUN6"].astype(str).str.strip())
+
+        # Dicionário código → nome do município extraído do GeoJSON
+        _nm_keys = ("NM_MUN", "NM_MUNICIP", "NOME_MUN", "NM_MUNICIPIO", "NOME_MUNICIPIO")
+        code_to_name: dict = {}
+        for feat in geojson.get("features", []):
+            props = feat.get("properties", {})
+            fid   = feat.get("id", "")
+            for k in _nm_keys:
+                if props.get(k):
+                    code_to_name[fid] = str(props[k]).title()
+                    break
+
+        data_codes = set(taxa_df["COD_MUN6"].tolist())
+        missing    = [c for c in all_codes if c not in data_codes]
+
+        traces = []
+
+        # Camada 1: fundo cinza com hover informativo para municípios sem dados
+        if missing:
+            missing_text = [
+                f"<b>{code_to_name.get(c, c)}</b><br>Sem dados disponíveis"
+                for c in missing
+            ]
+            traces.append(go.Choropleth(
+                geojson=geojson,
+                locations=missing,
+                featureidkey="id",
+                z=[0] * len(missing),
+                colorscale=[[0, "#cccccc"], [1, "#cccccc"]],
+                showscale=False,
+                marker_line_color="white",
+                marker_line_width=0.5,
+                text=missing_text,
+                hovertemplate="%{text}<extra></extra>",
+                name="Sem dados",
+            ))
+
+        # Filtra apenas municípios com taxa válida para a camada colorida
+        plot_df = taxa_df.dropna(subset=["taxa"])
+
+        zmin = range_min if range_min is not None else (float(plot_df["taxa"].min()) if not plot_df.empty else 0.0)
+        zmax = range_max if range_max is not None else (float(plot_df["taxa"].max()) if not plot_df.empty else 1.0)
+        if zmin == zmax:
+            zmax = zmin + 1.0
+
+        has_n = "N" in plot_df.columns
+
+        def _hover(r):
+            nome = code_to_name.get(r["COD_MUN6"], r["COD_MUN6"])
+            lines = [f"<b>{nome}</b>", f"{var_label}: <b>{r['taxa']:.2f}</b>"]
+            if has_n:
+                lines.append(f"Casos: {int(r['N']):,}".replace(",", "."))
+            return "<br>".join(lines)
+
+        hover_text = plot_df.apply(_hover, axis=1)
+
+        # Camada 2: dados coloridos (apenas municípios com taxa válida)
+        traces.append(go.Choropleth(
+            geojson=geojson,
+            locations=plot_df["COD_MUN6"],
+            featureidkey="id",
+            z=plot_df["taxa"],
+            zmin=zmin,
+            zmax=zmax,
+            colorscale=[[0, "#eaf6fb"], [0.5, TEAL], [1, PRIMARY]],
+            showscale=True,
+            marker_line_color="white",
+            marker_line_width=0.5,
+            text=hover_text,
+            hovertemplate="%{text}<extra></extra>",
+            colorbar=dict(title=var_label.replace(" ", "<br>", 1), thickness=15, len=0.55),
+            name=var_label,
+        ))
+
+        fig = go.Figure(data=traces)
+        fig.update_layout(**{
+            **LAYOUT_BASE,
+            "height": height,
+            "geo":    dict(fitbounds="locations", visible=False),
+            "margin": dict(l=0, r=0, t=10, b=0),
+        })
+        return fig
+
     @app.callback(
-        Output("sihsim-mapa-graph",  "figure"),
-        Output("sihsim-mapa-titulo", "children"),
-        Output("sihsim-mapa-aviso",  "children"),
-        Input("sihsim-sistema",  "value"),
-        Input("sihsim-causa",    "value"),
-        Input("sihsim-rm",       "value"),
-        Input("sihsim-mapa-ano", "value"),
+        Output("sihsim-mapa-container", "children"),
+        Output("sihsim-mapa-titulo",    "children"),
+        Output("sihsim-mapa-aviso",     "children"),
+        Input("sihsim-sistema",    "value"),
+        Input("sihsim-causa",      "value"),
+        Input("sihsim-rm",         "value"),
+        Input("sihsim-mapa-ano",   "value"),
+        Input("sihsim-mapa-modo",  "data"),
     )
-    def _update_mapa(sistema, causa, rm, ano):
+    def _update_mapa(sistema, causa, rm, ano, modo):
         titulo, aviso = "", ""
-        if not rm or ano is None:
-            return _empty("Selecione uma RM e um ano.", 580), titulo, aviso
+        if not rm or (ano is None and modo != "all"):
+            return [dcc.Graph(figure=_empty("Selecione uma RM e um ano.", 580))], titulo, aviso
 
         label_evento = "internações" if sistema == "SIH" else "óbitos"
         label_causa  = "cardiovasculares" if causa == "CARDIOVASCULAR" else "respiratórias"
-        titulo = f"Taxa de {label_evento} por doenças {label_causa} por 1.000 hab. — {rm} ({ano})"
 
-        data = ds.mapa_data(sistema, causa, rm, int(ano))
+        _cfg = {"displayModeBar": True, "displaylogo": False}
+
+        # ── Modo "Todos os anos" ──────────────────────────────────────────────
+        if modo == "all":
+            titulo        = f"Todos os anos — taxa de {label_evento} por doenças {label_causa} — {rm}"
+            all_years_data = ds.mapa_data_all_years(sistema or "SIH", causa or "CARDIOVASCULAR", rm)
+            if all_years_data is None:
+                aviso = "Sem dados geográficos disponíveis para esta RM."
+                return [dcc.Graph(figure=_empty("Sem dados disponíveis", 400))], titulo, aviso
+            if all_years_data.get("no_overlap"):
+                aviso = (
+                    "⚠️ Mapa indisponível para SIM nesta RM: CODMUNRES (residência) não coincide "
+                    "com os municípios da RM. Corrija o prepare_sih_sim_data.py para usar CODMUNOCOR."
+                )
+                return [dcc.Graph(figure=_empty(
+                    "Dado geográfico incompatível para SIM nesta RM.\n"
+                    "O município de residência (CODMUNRES) não pertence à RM selecionada.\n"
+                    "Corrija o prepare_sih_sim_data.py para usar CODMUNOCOR.", 400
+                ))], titulo, aviso
+
+            geo_data   = all_years_data["geo_data"]
+            geojson    = geo_data["geojson"]
+            all_codes  = geo_data.get("all_codes", [])
+            range_min  = all_years_data["global_min"]
+            range_max  = all_years_data["global_max"]
+
+            _vlabel = f"Taxa de {label_evento} {label_causa}/1.000 hab."
+            cards = []
+            for a, t_df in all_years_data["yearly"]:
+                fig = _build_choropleth_svg(
+                    t_df, geojson, all_codes,
+                    range_min=range_min, range_max=range_max, height=300,
+                    var_label=_vlabel,
+                )
+                cards.append(
+                    dbc.Col([
+                        html.H6(str(a), className="text-center text-primary fw-bold mb-1"),
+                        dcc.Graph(figure=fig,
+                                  config={**_cfg, "toImageButtonOptions": {"filename": f"mapa_{rm}_{a}"}}),
+                    ], xs=12, sm=6, lg=4, className="mb-4")
+                )
+
+            if not cards:
+                aviso = "Sem dados geográficos disponíveis para esta RM."
+                return [dcc.Graph(figure=_empty("Sem dados disponíveis", 400))], titulo, aviso
+            return [dbc.Row(cards, className="g-2")], titulo, aviso
+
+        # ── Modo ano único ────────────────────────────────────────────────────
+        titulo = f"Taxa de {label_evento} por doenças {label_causa} por 1.000 hab. — {rm} ({ano})"
+        data   = ds.mapa_data(sistema, causa, rm, int(ano))
         if data is None:
             aviso = (
                 "Sem dados geográficos para esta seleção. "
                 "Verifique se geojson_rm.json foi gerado pelo prepare_sih_sim_data.py."
             )
-            return _empty("Mapa indisponível", 580), titulo, aviso
+            return [dcc.Graph(figure=_empty("Mapa indisponível", 580))], titulo, aviso
+
+        if data.get("no_overlap"):
+            aviso = (
+                "⚠️ Mapa indisponível para SIM nesta RM: o parquet foi gerado com CODMUNRES "
+                "(município de residência do falecido), que não coincide com os municípios desta RM. "
+                "Para corrigir, inclua CODMUNOCOR no prepare_sih_sim_data.py."
+            )
+            return [dcc.Graph(figure=_empty(
+                "Dado geográfico incompatível para SIM nesta RM.\n"
+                "O município de residência (CODMUNRES) não pertence à RM selecionada.\n"
+                "Corrija o prepare_sih_sim_data.py para usar CODMUNOCOR.", 580
+            ))], titulo, aviso
 
         taxa_df = data["taxa_df"]
-        geojson = data["geojson"]
-
         if taxa_df.empty or "taxa" not in taxa_df.columns:
-            return _empty("Sem dados de taxa para esta RM/ano.", 580), titulo, aviso
+            return [dcc.Graph(figure=_empty("Sem dados de taxa para esta RM/ano.", 580))], titulo, aviso
 
-        # Usa COD_MUN6 como chave — já definido como id em cada feature pelo mapa_data()
-        taxa_df = taxa_df.copy()
-        taxa_df["COD_MUN6"] = taxa_df["COD_MUN6"].astype(str).str.strip()
-
-        # Centroide da RM a partir das features filtradas
-        try:
-            lats, lons = [], []
-            for feat in geojson["features"]:
-                geom = feat.get("geometry", {})
-                coords = geom.get("coordinates", [])
-                if geom.get("type") == "Polygon" and coords:
-                    ring = coords[0]
-                    lons += [p[0] for p in ring]
-                    lats += [p[1] for p in ring]
-                elif geom.get("type") == "MultiPolygon" and coords:
-                    for poly in coords:
-                        ring = poly[0]
-                        lons += [p[0] for p in ring]
-                        lats += [p[1] for p in ring]
-            lat_c = float(np.mean(lats)) if lats else -15.0
-            lon_c = float(np.mean(lons)) if lons else -50.0
-        except Exception:
-            lat_c, lon_c = -15.0, -50.0
-
-        # Zoom automático: maior RM → menor zoom
-        n_feat = len(geojson["features"])
-        zoom = 7 if n_feat <= 15 else (6 if n_feat <= 40 else 5)
-
-        nome_col = next(
-            (c for c in ["NM_MUN", "NOME_MUN", "NM_MUNICIP"] if c in taxa_df.columns),
-            None,
+        all_codes = data.get("all_codes", [])
+        _vlabel   = f"Taxa de {label_evento} {label_causa}/1.000 hab."
+        fig = _build_choropleth_svg(taxa_df, data["geojson"], all_codes, height=580,
+                                    var_label=_vlabel)
+        return (
+            [dcc.Graph(figure=fig,
+                       config={**_cfg, "toImageButtonOptions": {"filename": f"mapa_{rm}_{ano}"}})],
+            titulo,
+            aviso,
         )
-        hover = {c: True for c in ([nome_col] if nome_col else []) + ["taxa"]}
-
-        fig = px.choropleth_map(
-            taxa_df,
-            geojson=geojson,
-            locations="COD_MUN6",
-            featureidkey="id",
-            color="taxa",
-            color_continuous_scale=[[0, "#eaf6fb"], [0.5, TEAL], [1, PRIMARY]],
-            map_style="carto-positron",
-            zoom=zoom,
-            center={"lat": lat_c, "lon": lon_c},
-            opacity=0.75,
-            hover_data=hover,
-            labels={"taxa": "Taxa/1.000 hab.", "COD_MUN6": "Código"},
-        )
-        fig.update_layout(
-            **{**LAYOUT_BASE,
-               "height": 580,
-               "margin": dict(l=0, r=0, t=10, b=0),
-               "coloraxis_colorbar": dict(
-                   title="Taxa por<br>1.000 hab.", thickness=15, len=0.55,
-               )},
-        )
-        return fig, titulo, aviso
 

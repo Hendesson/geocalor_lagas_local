@@ -1,6 +1,6 @@
 """
 Componentes de card reutilizáveis — padrão GeoCalor.
-Uso: from components import chart_card, kpi_box, info_card
+Uso: from components import chart_card, kpi_box, info_card, dl_btn
 """
 from dash import html
 
@@ -40,6 +40,16 @@ def chart_card(titulo: str, children, fa_icon: str = "fas fa-chart-line") -> htm
             ),
             html.Div(children, className="chart-card-body p-3"),
         ],
+    )
+
+
+def dl_btn(graph_id: str, filename: str = None) -> html.Button:
+    """Botão de download PNG para um gráfico Plotly (usa download_graphs.js via data-attr)."""
+    fname = filename or graph_id.replace("-", "_")
+    return html.Button(
+        [html.I(className="fas fa-download me-1"), "Baixar PNG"],
+        className="btn-download-asset mt-1",
+        **{"data-plotly-download": graph_id, "data-plotly-filename": fname},
     )
 
 

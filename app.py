@@ -29,7 +29,7 @@ PAGE_ENTRIES = [
     {"path": "/temperaturas", "label": "Caracterização Climática das RMB"},
     {"path": "/ondas", "label": "Ondas de calor"},
     {"path": "/sistemas-alerta", "label": "Sistemas de alerta"},
-    {"path": "/sih-sim",         "label": "SIH/SIM"},
+    {"path": "/sih-sim",         "label": "Perfil"},
     {"path": "/contato",         "label": "Equipe e contato"},
 ]
 
@@ -37,7 +37,7 @@ PAGE_ENTRIES = [
 try:
     data_processor = DataProcessor()
     visualizer = Visualizer()
-    df = data_processor.load_data()
+    df = data_processor.df if data_processor.df is not None else pd.DataFrame()
     cidades = data_processor.cidades if data_processor.cidades else []
     anos = data_processor.anos if data_processor.anos else []
     if not isinstance(cidades, list):
@@ -45,6 +45,14 @@ try:
     if not isinstance(anos, list):
         anos = []
     logger.info("Dados: %s linhas, %s cidades", len(df), len(cidades))
+    # Pré-aquece os dois heatmaps pesados para que o primeiro clique seja rápido
+    if not df.empty:
+        try:
+            data_processor.prepare_heatmap_data()
+            data_processor.prepare_heatmap_events_data()
+            logger.info("Caches de heatmap pré-computados.")
+        except Exception as _e:
+            logger.warning("Erro ao pré-computar caches de heatmap: %s", _e)
 except Exception as e:
     logger.error("Erro ao inicializar dados: %s", e)
     df = pd.DataFrame()

@@ -10,7 +10,7 @@ import pandas as pd
 import calendar
 from datetime import date
 
-from components import chart_card, info_card, dd
+from components import chart_card, info_card, dd, dl_btn
 
 
 def chart_note(texto: str) -> html.P:
@@ -66,7 +66,6 @@ def layout_ondas(app, df, cidades, anos):
         ], className="text-center"),
 
         html.Br(),
-        dbc.Row([dbc.Col(nota_tecnica_card(), width=12)]),
 
         dbc.Row([
             dbc.Col(
@@ -99,6 +98,7 @@ def layout_ondas(app, df, cidades, anos):
                             "ao longo de todo o período histórico. Cada eixo representa "
                             "um mês; o valor indica o total de dias de OC registrados."
                         ),
+                        dl_btn("grafico-polar-total", "polar_oc_periodo_completo"),
                     ],
                     fa_icon="fas fa-chart-pie",
                 ),
@@ -129,6 +129,7 @@ def layout_ondas(app, df, cidades, anos):
                             "Distribuição mensal das Ondas de Calor para o ano e cidade "
                             "selecionados. Permite identificar os meses de maior ocorrência."
                         ),
+                        dl_btn("grafico-polar", "polar_oc_ano"),
                     ],
                     fa_icon="fas fa-calendar-alt",
                 ),
@@ -158,6 +159,7 @@ def layout_ondas(app, df, cidades, anos):
                     "As faixas laranjas indicam os dias classificados como Onda de Calor "
                     "(EHF > 0 por ≥ 3 dias consecutivos). Marcadores 'Pico' = Percentil 95."
                 ),
+                dl_btn("grafico-temp-hw", "temperatura_ondas_calor"),
             ],
             fa_icon="fas fa-thermometer-full",
         ),
@@ -171,6 +173,7 @@ def layout_ondas(app, df, cidades, anos):
                     "A linha vermelha representa o limiar zero: valores positivos "
                     "indicam condições de excesso de calor."
                 ),
+                dl_btn("grafico-ehf-hw", "ehf_diario"),
             ],
             fa_icon="fas fa-fire",
         ),
@@ -183,6 +186,7 @@ def layout_ondas(app, df, cidades, anos):
                     "Umidade relativa (%). Faixas laranjas com opacidade proporcional "
                     "à intensidade da OC: baixa, severa e extrema."
                 ),
+                dl_btn("grafico-umidade-hw", "umidade_ondas_calor"),
             ],
             fa_icon="fas fa-tint",
         ),
@@ -226,6 +230,12 @@ def layout_ondas(app, df, cidades, anos):
                                 target="img-mapa-temperatura",
                                 id="mapa-temperatura-tooltip"),
                 ]),
+                html.A(
+                    [html.I(className="fas fa-download me-1"), "Baixar imagem"],
+                    href=app.get_asset_url('limiares de temperaturas extremas.png'),
+                    download="limiares_temperaturas_extremas.png",
+                    className="btn-download-asset",
+                ),
             ]),
         ], className="mb-4 shadow-sm border-0"),
 
@@ -247,6 +257,7 @@ def layout_ondas(app, df, cidades, anos):
                     "Frequência de dias ou eventos de OC por ano (eixo X) e cidade (eixo Y). "
                     "Cores mais intensas indicam maior ocorrência."
                 ),
+                dl_btn("heatmap-oc", "frequencia_oc"),
             ],
             fa_icon="fas fa-th",
         ),
@@ -300,6 +311,13 @@ def layout_ondas(app, df, cidades, anos):
                         style={"position": "relative", "display": "inline-block"},
                     ),
                 ]),
+                html.A(
+                    [html.I(className="fas fa-download me-1"), "Baixar mapa"],
+                    id="download-heatmap-year-btn",
+                    href=app.get_asset_url('DIAS 2010.png'),
+                    download="dias_oc_2010.png",
+                    className="btn-download-asset",
+                ),
                 dcc.Store(id='current-year-map-index', data=0),
                 dcc.Store(id='year-map-list', data=[str(y) for y in range(2010, 2024)]),
             ]),
@@ -352,6 +370,12 @@ def layout_ondas(app, df, cidades, anos):
                     "registradas no período 1981–2023.",
                     className="text-muted small mb-3",
                 ),
+                html.A(
+                    [html.I(className="fas fa-print me-1"), "Abrir para imprimir / captura de tela"],
+                    href="/mapa-eventos-geral",
+                    target="_blank",
+                    className="btn-download-asset mb-2",
+                ),
                 html.Iframe(
                     src="/mapa-eventos-geral",
                     style={
@@ -396,6 +420,12 @@ def layout_ondas(app, df, cidades, anos):
                     "controles do mapa para explorar diferentes regiões e períodos.",
                     className="text-muted small mb-3",
                 ),
+                html.A(
+                    [html.I(className="fas fa-print me-1"), "Abrir para imprimir / captura de tela"],
+                    href="/mapa-eventos-extremos",
+                    target="_blank",
+                    className="btn-download-asset mb-2",
+                ),
                 html.Iframe(
                     src="/mapa-eventos-extremos",
                     style={
@@ -408,12 +438,14 @@ def layout_ondas(app, df, cidades, anos):
             ]),
         ], className="mb-5 shadow-sm border-0"),
 
+        dbc.Row([dbc.Col(nota_tecnica_card(), width=12)]),
+
     ], fluid=True, className="py-4")
 
 
 def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualizer):
 
-    def create_calendar_component(dias_calor, ano, mes, cidade):
+    def create_calendar_component(dias_calor, ano, mes, cidade, dia_info):
         cal = calendar.monthcalendar(ano, mes)
         month_name = calendar.month_name[mes]
 
@@ -473,11 +505,8 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
                     is_hw = current_date in dias_calor
                     if is_hw:
                         try:
-                            row_data = df[
-                                (df["cidade"] == cidade) &
-                                (df["index"].dt.date == current_date)
-                            ].iloc[0]
-                            raw_intensity = row_data.get("HWDay_Intensity", None)
+                            row_data = dia_info.get(current_date, {})
+                            raw_intensity = row_data.get("HWDay_Intensity")
                             color, intensity_label, abbr = get_intensity_info(raw_intensity)
                             btn = dbc.Button(
                                 # Número do dia em cima + abreviação da classe embaixo
@@ -552,7 +581,7 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
         return html.Div([header, html.Div(weeks, className="calendar-body")],
                         className="calendar-container p-3")
 
-    def create_calendar_grid(dias_calor, ano, cidade):
+    def create_calendar_grid(dias_calor, ano, cidade, dia_info):
         legend = html.Div([
             html.Strong("Legenda: ", className="me-2", style={"fontSize": "0.85rem"}),
             html.Span([
@@ -584,7 +613,7 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
         return html.Div([
             legend,
             dbc.Row([
-                dbc.Col(create_calendar_component(dias_calor, ano, mes, cidade),
+                dbc.Col(create_calendar_component(dias_calor, ano, mes, cidade, dia_info),
                         xs=12, sm=6, lg=4, className="mb-4")
                 for mes in range(1, 13)
             ])
@@ -608,10 +637,20 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
     def update_hw_annual(cidade, ano):
         if df.empty or not cidade or not ano or data_processor is None:
             return visualizer.create_polar_plot(pd.DataFrame(), "", 0), []
-        df_polar = data_processor.calculate_hw_monthly(cidade, ano)
-        dias_calor = data_processor.get_heat_wave_days(cidade)
+        df_polar       = data_processor.calculate_hw_monthly(cidade, ano)
+        dias_calor_set = set(data_processor.get_heat_wave_days(cidade))
+
+        # Pré-constrói dict {date: info} para O(1) no loop do calendário
+        # (evita ~365 filtragens de DataFrame dentro create_calendar_component)
+        dff_ano = df[(df["cidade"] == cidade) & (df["year"] == ano)]
+        info_cols = [c for c in ["HWDay_Intensity", "tempMax", "tempMed", "tempMin"] if c in df.columns]
+        dia_info = dict(zip(
+            dff_ano["index"].dt.date,
+            dff_ano[info_cols].to_dict("records"),
+        ))
+
         return (visualizer.create_polar_plot(df_polar, cidade, ano),
-                create_calendar_grid(dias_calor, ano, cidade))
+                create_calendar_grid(dias_calor_set, ano, cidade, dia_info))
 
     @app.callback(
         Output("calendar-container", "style"),
@@ -776,15 +815,23 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
         return i
 
     @app.callback(
-        [Output('heatmap-year-map',      'src'),
-         Output('current-map-year',      'children'),
-         Output('heatmap-year-tooltip',  'children')],
+        [Output('heatmap-year-map',         'src'),
+         Output('current-map-year',         'children'),
+         Output('heatmap-year-tooltip',     'children'),
+         Output('download-heatmap-year-btn','href'),
+         Output('download-heatmap-year-btn','download')],
         [Input('current-year-map-index', 'data'),
          Input('year-map-list',          'data')]
     )
     def update_heatmap_year(idx, year_list):
         if not year_list:
-            return "", "", ""
+            return "", "", "", "", ""
         i = 0 if idx is None else int(idx) % len(year_list)
         yr = year_list[i]
-        return app.get_asset_url(f"DIAS {yr}.png"), f"Ano: {yr}", f"Mapa do Ano {yr}"
+        return (
+            app.get_asset_url(f"DIAS {yr}.png"),
+            f"Ano: {yr}",
+            f"Mapa do Ano {yr}",
+            app.get_asset_url(f"DIAS {yr}.png"),
+            f"dias_oc_{yr}.png",
+        )

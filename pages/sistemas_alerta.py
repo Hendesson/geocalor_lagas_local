@@ -106,14 +106,28 @@ def _texto(children) -> html.Div:
     )
 
 
-def _grafico(app, filename: str, alt: str) -> html.Img:
-    """Imagem de gráfico centralizada e responsiva."""
-    return html.Img(
-        src=app.get_asset_url(f"sistemas_alerta/images/{filename}"),
-        alt=alt,
-        className="img-fluid d-block mx-auto my-3",
-        style={"maxWidth": "860px", "width": "100%"},
+def _dl_img(app, filename: str) -> html.A:
+    """Botão de download para imagem estática de asset."""
+    return html.A(
+        [html.I(className="fas fa-download me-1"), "Baixar PNG"],
+        href=app.get_asset_url(f"sistemas_alerta/images/{filename}"),
+        download=filename,
+        className="btn-download-asset d-block mx-auto mt-1 mb-3",
+        style={"width": "fit-content"},
     )
+
+
+def _grafico(app, filename: str, alt: str) -> html.Div:
+    """Imagem de gráfico centralizada e responsiva com botão de download."""
+    return html.Div([
+        html.Img(
+            src=app.get_asset_url(f"sistemas_alerta/images/{filename}"),
+            alt=alt,
+            className="img-fluid d-block mx-auto my-3",
+            style={"maxWidth": "860px", "width": "100%"},
+        ),
+        _dl_img(app, filename),
+    ])
 
 
 def layout_sistemas_alerta(app) -> dbc.Container:
@@ -223,7 +237,17 @@ def layout_sistemas_alerta(app) -> dbc.Container:
                             html.P(
                                 id="alerta-carousel-caption",
                                 children=f"Infográfico 1 de {_NUM_INFOGRAFICOS}",
-                                className="text-center text-muted small mt-3 mb-0",
+                                className="text-center text-muted small mt-3 mb-1",
+                            ),
+                            html.Div(
+                                html.A(
+                                    [html.I(className="fas fa-download me-1"), "Baixar PNG"],
+                                    id="alerta-carousel-dl",
+                                    href=app.get_asset_url("sistemas_alerta/images/infografico_1.png"),
+                                    download="infografico_1.png",
+                                    className="btn-download-asset",
+                                ),
+                                className="text-center mt-1 mb-2",
                             ),
                         ]
                     ),
@@ -351,6 +375,8 @@ def register_callbacks_sistemas_alerta(app) -> None:
         Output("alerta-carousel-img", "src"),
         Output("alerta-carousel-idx", "data"),
         Output("alerta-carousel-caption", "children"),
+        Output("alerta-carousel-dl", "href"),
+        Output("alerta-carousel-dl", "download"),
         Input("alerta-carousel-prev", "n_clicks"),
         Input("alerta-carousel-next", "n_clicks"),
         State("alerta-carousel-idx", "data"),
@@ -365,6 +391,7 @@ def register_callbacks_sistemas_alerta(app) -> None:
             idx = idx - 1 if idx > 1 else _NUM_INFOGRAFICOS
         elif tid == "alerta-carousel-next":
             idx = idx + 1 if idx < _NUM_INFOGRAFICOS else 1
-        src = app.get_asset_url(f"sistemas_alerta/images/infografico_{idx}.png")
-        cap = f"Infográfico {idx} de {_NUM_INFOGRAFICOS}"
-        return src, idx, cap
+        fname = f"infografico_{idx}.png"
+        src   = app.get_asset_url(f"sistemas_alerta/images/{fname}")
+        cap   = f"Infográfico {idx} de {_NUM_INFOGRAFICOS}"
+        return src, idx, cap, src, fname

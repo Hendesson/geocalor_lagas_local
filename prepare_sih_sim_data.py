@@ -189,7 +189,7 @@ def _processa_sim(csv_path: Path, prefixo: str) -> None:
     log.info("Lendo SIM: %s", csv_path.name)
     cols_needed = [
         "NOME_REGMETROP", "ANO_OBITO", "MES_OBITO",
-        "SEXO", "RACACOR", "CODMUNRES",
+        "SEXO", "RACACOR", "CODMUNRES", "CODMUNOCOR",
         "LOCOCOR", "ESTCIV",
     ]
     df = pd.read_csv(csv_path, sep=";", encoding="latin1", dtype=str, low_memory=True)
@@ -253,11 +253,21 @@ def _processa_sim(csv_path: Path, prefixo: str) -> None:
         g7 = df.groupby(["NOME_RM", "ESTCIV"], dropna=True).size().reset_index(name="N")
         g7.to_parquet(OUT / f"{prefixo}_estciv.parquet", index=False)
 
-    # 8. Mapa — contagem por município e ano
-    if "CODMUNRES" in df.columns:
-        df["CODMUNRES"] = df["CODMUNRES"].astype(str).str.strip().str.zfill(6)
-        g8 = df.groupby(["NOME_RM", "CODMUNRES", "ANO_OBITO"], dropna=True).size().reset_index(name="N")
+    # 8. Mapa — contagem por município de OCORRÊNCIA do óbito e ano
+    # CODMUNOCOR = município onde o óbito ocorreu (hospital/domicílio)
+    # CODMUNRES  = município de residência — NÃO usar para mapa geográfico da RM
+    mun_mapa = next((c for c in ["CODMUNOCOR", "CODMUNRES"] if c in df.columns), None)
+    if mun_mapa:
+        if mun_mapa == "CODMUNRES":
+            log.warning("  CODMUNOCOR ausente — usando CODMUNRES como fallback para mapa_mun "
+                        "(pode haver inconsistência geográfica em RMs polo, ex.: Curitiba)")
+        df_mapa = df[[c for c in ["NOME_RM", mun_mapa, "ANO_OBITO"] if c in df.columns]].copy()
+        df_mapa["CODMUNOCOR"] = df_mapa[mun_mapa].astype(str).str.strip().str[:6].str.zfill(6)
+        g8 = df_mapa.groupby(["NOME_RM", "CODMUNOCOR", "ANO_OBITO"], dropna=True).size().reset_index(name="N")
         g8.to_parquet(OUT / f"{prefixo}_mapa_mun.parquet", index=False)
+        log.info("  mapa_mun: %d linhas (coluna fonte: %s)", len(g8), mun_mapa)
+    else:
+        log.warning("  mapa_mun não gerado: CODMUNOCOR e CODMUNRES ausentes")
 
     log.info("  SIM %s: parquets gravados.", prefixo)
 
