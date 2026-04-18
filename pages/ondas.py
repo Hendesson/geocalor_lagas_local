@@ -378,12 +378,7 @@ def layout_ondas(app, df, cidades, anos):
                 ),
                 html.Iframe(
                     src="/mapa-eventos-geral",
-                    style={
-                        "width": "100%",
-                        "height": "580px",
-                        "border": "none",
-                        "borderRadius": "12px",
-                    },
+                    className="mapa-folium-iframe",
                 ),
             ]),
         ], className="mb-4 shadow-sm border-0"),
@@ -428,12 +423,7 @@ def layout_ondas(app, df, cidades, anos):
                 ),
                 html.Iframe(
                     src="/mapa-eventos-extremos",
-                    style={
-                        "width": "100%",
-                        "height": "620px",
-                        "border": "none",
-                        "borderRadius": "12px",
-                    },
+                    className="mapa-folium-iframe mapa-folium-iframe--tall",
                 ),
             ]),
         ], className="mb-5 shadow-sm border-0"),
