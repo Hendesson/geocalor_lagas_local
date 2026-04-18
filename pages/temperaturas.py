@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.graph_objs as go
 
 from config import YEAR_MIN, YEAR_MAX
-from components import chart_card, info_card, dd
+from components import chart_card, info_card, dd, dl_btn
 
 
 def chart_note(texto: str) -> html.P:
@@ -57,16 +57,19 @@ def _estacoes_map_children(df: pd.DataFrame):
     if df.empty or "Lat" not in df.columns or "Long" not in df.columns:
         return []
     meta = df.drop_duplicates(subset=["cidade"], keep="first").dropna(subset=["Lat", "Long"])
+    # Pré-computa estatísticas por cidade uma única vez (evita 15 filtros full-df)
+    city_stats = (
+        df.groupby("cidade")["year"]
+        .agg(y_min="min", y_max="max", n_reg="count")
+        .to_dict("index")
+    )
     out = []
     for _, row in meta.iterrows():
         cidade = str(row["cidade"])
-        sub = df[df["cidade"] == cidade]
-        try:
-            y_min = int(sub["year"].min())
-            y_max = int(sub["year"].max())
-        except Exception:
-            y_min, y_max = YEAR_MIN, YEAR_MAX
-        n_reg = len(sub)
+        stats  = city_stats.get(cidade, {})
+        y_min  = int(stats.get("y_min", YEAR_MIN))
+        y_max  = int(stats.get("y_max", YEAR_MAX))
+        n_reg  = int(stats.get("n_reg", 0))
         lat, lon = float(row["Lat"]), float(row["Long"])
 
         extras = []
@@ -180,7 +183,6 @@ def layout_temperaturas(app, df, cidades, anos):
                     ],
                     fa_icon="fas fa-map-marked-alt",
                 ),
-                nota_tecnica_card(),
             ], xs=12, lg=5),
 
             dbc.Col([
@@ -194,6 +196,7 @@ def layout_temperaturas(app, df, cidades, anos):
                             "Série temporal das temperaturas máxima (vermelho), média "
                             "(laranja) e mínima (teal) diárias para a cidade e período selecionados."
                         ),
+                        dl_btn("grafico-temp", "temperaturas_diarias"),
                     ],
                     fa_icon="fas fa-thermometer-half",
                 ),
@@ -205,6 +208,7 @@ def layout_temperaturas(app, df, cidades, anos):
                             "Umidade relativa do ar média por mês. Valores sazonais "
                             "evidenciam a alternância entre estação seca e chuvosa."
                         ),
+                        dl_btn("grafico-umidade", "umidade_media_mensal"),
                     ],
                     fa_icon="fas fa-tint",
                 ),
@@ -238,6 +242,7 @@ def layout_temperaturas(app, df, cidades, anos):
                             "Amplitude térmica diária (tempMax − tempMin). A linha "
                             "tracejada representa a média móvel de 30 dias."
                         ),
+                        dl_btn("grafico-amplitude", "amplitude_termica"),
                     ],
                     fa_icon="fas fa-arrows-alt-v",
                 ),
@@ -251,11 +256,16 @@ def layout_temperaturas(app, df, cidades, anos):
                             "Anomalia da temperatura média mensal vs. climatologia histórica. "
                             "Barras vermelhas: acima da média; barras teal: abaixo."
                         ),
+                        dl_btn("grafico-anomalia", "anomalia_temperatura"),
                     ],
                     fa_icon="fas fa-chart-bar",
                 ),
             ], xs=12, md=6, className="mb-3"),
         ], className="align-items-stretch"),
+
+        dbc.Row([
+            dbc.Col(nota_tecnica_card(), width=12),
+        ]),
 
     ], fluid=True, className="py-4")
 

@@ -137,11 +137,12 @@ class DataProcessor:
                     df["isHW"] = df["isHW"].map({1: "TRUE", 1.0: "TRUE", 0: "FALSE", 0.0: "FALSE"}).fillna("FALSE").astype(str)
                 else:
                     # Se for category ou object, converte para string e uppercase
-                    df["isHW"] = df["isHW"].astype(str).str.upper()
-                    # Remove espaços e normaliza
-                    df["isHW"] = df["isHW"].str.strip()
-                    # Garante que valores vazios ou "nan" viram "FALSE"
-                    df["isHW"] = df["isHW"].replace(["", "nan", "NAN", "NONE", "NONE"], "FALSE")
+                    df["isHW"] = df["isHW"].astype(str).str.upper().str.strip()
+                    # Garante que valores vazios, nan e booleanos portugueses viram "TRUE"/"FALSE"
+                    df["isHW"] = df["isHW"].replace({
+                        "": "FALSE", "NAN": "FALSE", "NONE": "FALSE", "NULL": "FALSE",
+                        "VERDADEIRO": "TRUE", "FALSO": "FALSE", "1": "TRUE", "0": "FALSE",
+                    })
                 
                 logger.info("Coluna 'isHW' formatada")
                 logger.info(f"  Valores únicos de isHW: {df['isHW'].unique()}")
@@ -235,49 +236,21 @@ class DataProcessor:
         if self.df is None or self.df.empty:
             logger.warning("DataFrame vazio, não é possível calcular frequência mensal")
             return pd.DataFrame()
-            
-        # Filtra os dados para a cidade e ano específicos
-        dff = self.df[
-            (self.df["cidade"] == cidade) & 
-            (self.df["year"] == ano)
-        ].copy()
-        
-        # Converte a coluna de data para datetime se ainda não for
-        dff["index"] = pd.to_datetime(dff["index"])
-        
-        # Cria um DataFrame com todos os meses do ano
+
+        dff = self.df[(self.df["cidade"] == cidade) & (self.df["year"] == ano)]
+
         all_months = pd.date_range(start=f"{ano}-01-01", end=f"{ano}-12-31", freq="ME")
         all_months_df = pd.DataFrame({
             "mes": all_months.strftime("%B"),
-            "month": all_months.month
+            "month": all_months.month,
         })
-        
-        # Calcula a frequência de ondas de calor por mês
-        # Normaliza isHW antes de filtrar
-        if "isHW" in dff.columns:
-            isHW_normalized = self._normalize_isHW(dff["isHW"])
-            hw_mask = isHW_normalized == "TRUE"
-        else:
-            hw_mask = pd.Series([False] * len(dff), index=dff.index)
-        
+
+        hw_mask = dff["isHW"] == "TRUE" if "isHW" in dff.columns else pd.Series(False, index=dff.index)
         monthly_counts = dff[hw_mask].groupby(dff["index"].dt.month).size().reset_index(name="frequencia")
         monthly_counts.columns = ["month", "frequencia"]
-        
-        # Combina com todos os meses e preenche com 0 onde não há ondas de calor
-        monthly_counts = all_months_df.merge(
-            monthly_counts, on="month", how="left"
-        ).fillna({"frequencia": 0})
-        
-        # Ordena os meses corretamente
-        month_order = {
-            "January": 1, "February": 2, "March": 3, "April": 4,
-            "May": 5, "June": 6, "July": 7, "August": 8,
-            "September": 9, "October": 10, "November": 11, "December": 12
-        }
-        monthly_counts["mes"] = monthly_counts["mes"].map(lambda x: x)
-        monthly_counts = monthly_counts.sort_values("month")
-        
-        return monthly_counts[["mes", "frequencia"]]
+
+        monthly_counts = all_months_df.merge(monthly_counts, on="month", how="left").fillna({"frequencia": 0})
+        return monthly_counts.sort_values("month")[["mes", "frequencia"]]
 
     @cached_dataframe(key_prefix="hw_monthly_all")
     def calculate_hw_monthly_all_years(self, cidade: str) -> pd.DataFrame:
@@ -293,40 +266,21 @@ class DataProcessor:
         if self.df is None or self.df.empty:
             logger.warning("DataFrame vazio, não é possível calcular frequência mensal")
             return pd.DataFrame()
-            
-        # Filtra os dados para a cidade específica
-        dff = self.df[self.df["cidade"] == cidade].copy()
-        
-        # Converte a coluna de data para datetime se ainda não for
-        dff["index"] = pd.to_datetime(dff["index"])
-        
-        # Cria um DataFrame com todos os meses
+
+        dff = self.df[self.df["cidade"] == cidade]
+
         all_months = pd.DataFrame({
             "mes": ["January", "February", "March", "April", "May", "June",
-                   "July", "August", "September", "October", "November", "December"],
-            "month": range(1, 13)
+                    "July", "August", "September", "October", "November", "December"],
+            "month": range(1, 13),
         })
-        
-        # Calcula a frequência de ondas de calor por mês
-        # Normaliza isHW antes de filtrar
-        if "isHW" in dff.columns:
-            isHW_normalized = self._normalize_isHW(dff["isHW"])
-            hw_mask = isHW_normalized == "TRUE"
-        else:
-            hw_mask = pd.Series([False] * len(dff), index=dff.index)
-        
+
+        hw_mask = dff["isHW"] == "TRUE" if "isHW" in dff.columns else pd.Series(False, index=dff.index)
         monthly_counts = dff[hw_mask].groupby(dff["index"].dt.month).size().reset_index(name="frequencia")
         monthly_counts.columns = ["month", "frequencia"]
-        
-        # Combina com todos os meses e preenche com 0 onde não há ondas de calor
-        monthly_counts = all_months.merge(
-            monthly_counts, on="month", how="left"
-        ).fillna({"frequencia": 0})
-        
-        # Ordena os meses corretamente
-        monthly_counts = monthly_counts.sort_values("month")
-        
-        return monthly_counts[["mes", "frequencia"]]
+
+        monthly_counts = all_months.merge(monthly_counts, on="month", how="left").fillna({"frequencia": 0})
+        return monthly_counts.sort_values("month")[["mes", "frequencia"]]
 
     @cached_dataframe(key_prefix="hw_events")
     def calculate_hw_events(self, cidade: str, ano: int) -> pd.DataFrame:
@@ -345,54 +299,29 @@ class DataProcessor:
             logger.warning("DataFrame vazio, não é possível calcular eventos de ondas de calor")
             return pd.DataFrame()
 
-        df_cidade = self.df[self.df['cidade'] == cidade].copy()
-        df_cidade_ano = df_cidade[df_cidade['index'].dt.year == ano].copy()
-        
-        # Identifica os dias de onda de calor (isHW == TRUE)
-        # Normaliza isHW antes de comparar
-        if "isHW" in df_cidade_ano.columns:
-            isHW_normalized = self._normalize_isHW(df_cidade_ano['isHW'])
-            df_cidade_ano['isHW_bool'] = isHW_normalized == "TRUE"
-        else:
-            df_cidade_ano['isHW_bool'] = False
-        
-        # Agrupa por períodos consecutivos de isHW_bool
-        # Reseta o índice para garantir que a numeração do grupo seja sequencial após o filtro do ano
-        df_cidade_ano = df_cidade_ano.reset_index()
-        df_cidade_ano['group'] = (df_cidade_ano['isHW_bool'] != df_cidade_ano['isHW_bool'].shift()).cumsum()
-        
-        # Filtra apenas os grupos que são ondas de calor (isHW_bool == True)
-        hw_groups = df_cidade_ano[df_cidade_ano['isHW_bool']].copy()
-        
-        # Calcula a duração de cada período de onda de calor
-        hw_periods = hw_groups.groupby(['month', 'group']).size().reset_index(name='duration')
-        
-        # Filtra apenas períodos com 3 ou mais dias
-        hw_periods = hw_periods[hw_periods['duration'] >= 3]
-        
-        # Conta o número de eventos (grupos válidos) por mês
-        # Usa o group para contar cada evento único
-        hw_events = hw_periods.groupby(['month'])['group'].nunique().reset_index(name='frequencia')
-        
-        # Cria o DataFrame final com todos os meses
+        # Seleciona só as colunas necessárias para reduzir uso de memória
+        dff = self.df.loc[
+            (self.df['cidade'] == cidade) & (self.df['year'] == ano),
+            ["index", "month", "isHW"],
+        ].copy()
+
+        dff["isHW_bool"] = dff["isHW"] == "TRUE"
+        dff = dff.reset_index(drop=True)
+        dff["group"] = (dff["isHW_bool"] != dff["isHW_bool"].shift()).cumsum()
+
+        hw_groups  = dff[dff["isHW_bool"]]
+        hw_periods = hw_groups.groupby(["month", "group"]).size().reset_index(name="duration")
+        hw_periods = hw_periods[hw_periods["duration"] >= 3]
+        hw_events  = hw_periods.groupby("month")["group"].nunique().reset_index(name="frequencia")
+
         months = pd.DataFrame({
-            'mes': ["January", "February", "March", "April", "May", "June",
-                   "July", "August", "September", "October", "November", "December"],
-            'month': range(1, 13)
+            'mes':   ["January", "February", "March", "April", "May", "June",
+                      "July", "August", "September", "October", "November", "December"],
+            'month': range(1, 13),
         })
-        
-        # Combina com todos os meses e preenche com 0 onde não há eventos
-        hw_events = pd.merge(
-            months,
-            hw_events,
-            on='month',
-            how='left'
-        ).fillna({'frequencia': 0})
-        
-        # Ordena os meses corretamente
-        hw_events = hw_events.sort_values('month')
-        
-        return hw_events[['mes', 'frequencia']]
+
+        hw_events = pd.merge(months, hw_events, on='month', how='left').fillna({'frequencia': 0})
+        return hw_events.sort_values('month')[['mes', 'frequencia']]
 
     @cached_dataframe(key_prefix="hw_events_all")
     def calculate_hw_events_all_years(self, cidade: str) -> pd.DataFrame:
@@ -410,78 +339,33 @@ class DataProcessor:
             logger.warning("DataFrame vazio, não é possível calcular eventos de ondas de calor")
             return pd.DataFrame()
 
-        df_cidade = self.df[self.df['cidade'] == cidade].copy()
+        # Seleciona só as colunas necessárias para reduzir uso de memória
+        dff = self.df.loc[self.df['cidade'] == cidade, ["year", "month", "isHW"]].copy()
 
-        # Identifica os dias de onda de calor (isHW == TRUE)
-        # Normaliza isHW antes de comparar
-        if "isHW" in df_cidade.columns:
-            isHW_normalized = self._normalize_isHW(df_cidade['isHW'])
-            df_cidade['isHW_bool'] = isHW_normalized == "TRUE"
-        else:
-            df_cidade['isHW_bool'] = False
-        
-        # Agrupa por períodos consecutivos de isHW_bool
-        df_cidade['group'] = (df_cidade['isHW_bool'] != df_cidade['isHW_bool'].shift()).cumsum()
-        
-        # Filtra apenas os grupos que são ondas de calor (isHW_bool == True)
-        hw_groups = df_cidade[df_cidade['isHW_bool']].copy()
-        
-        # Calcula a duração de cada período de onda de calor
-        # Precisamos agrupar por year, month e group para a duração correta por mês/evento
-        hw_periods = hw_groups.groupby(['year', 'month', 'group']).size().reset_index(name='duration')
-        
-        # Filtra apenas períodos com 3 ou mais dias
-        hw_periods = hw_periods[hw_periods['duration'] >= 3]
-        
-        # Conta o número de eventos (grupos válidos) por mês ao longo de todos os anos
-        # Usa o group para contar cada evento único
-        hw_events = hw_periods.groupby(['month'])['group'].nunique().reset_index(name='frequencia')
-        
-        # Cria o DataFrame final com todos os meses
+        dff["isHW_bool"] = dff["isHW"] == "TRUE"
+        dff["group"] = (dff["isHW_bool"] != dff["isHW_bool"].shift()).cumsum()
+
+        hw_groups  = dff[dff["isHW_bool"]]
+        hw_periods = hw_groups.groupby(["year", "month", "group"]).size().reset_index(name="duration")
+        hw_periods = hw_periods[hw_periods["duration"] >= 3]
+        hw_events  = hw_periods.groupby("month")["group"].nunique().reset_index(name="frequencia")
+
         months = pd.DataFrame({
-            'mes': ["January", "February", "March", "April", "May", "June",
-                   "July", "August", "September", "October", "November", "December"],
-            'month': range(1, 13)
+            'mes':   ["January", "February", "March", "April", "May", "June",
+                      "July", "August", "September", "October", "November", "December"],
+            'month': range(1, 13),
         })
-        
-        # Combina com todos os meses e preenche com 0 onde não há eventos
-        hw_events = pd.merge(
-            months,
-            hw_events,
-            on='month',
-            how='left'
-        ).fillna({'frequencia': 0})
-        
-        # Ordena os meses corretamente
-        hw_events = hw_events.sort_values('month')
-        
-        return hw_events[['mes', 'frequencia']]
 
-    def get_heat_wave_days(self, cidade: str) -> List[date]:
-        """
-        Retorna os dias com ondas de calor (isHW == TRUE) para uma cidade.
-        
-        Args:
-            cidade: Nome da cidade
-            
-        Returns:
-            Lista de datas com ondas de calor
-        """
-        if self.df is None or self.df.empty:
-            logger.warning("DataFrame vazio, não é possível obter dias de ondas de calor")
+        hw_events = pd.merge(months, hw_events, on='month', how='left').fillna({'frequencia': 0})
+        return hw_events.sort_values('month')[['mes', 'frequencia']]
+
+    @cached_dataframe(key_prefix="hw_days")
+    def get_heat_wave_days(self, cidade: str) -> list:
+        """Retorna os dias com ondas de calor (isHW == TRUE) para uma cidade."""
+        if self.df is None or self.df.empty or "isHW" not in self.df.columns:
             return []
-            
-        # Filtra apenas onde isHW é explicitamente 'TRUE'
-        # Normaliza isHW antes de comparar
-        if "isHW" in self.df.columns:
-            isHW_normalized = self._normalize_isHW(self.df['isHW'])
-            hw_mask = isHW_normalized == "TRUE"
-            return self.df[
-                (self.df['cidade'] == cidade) &
-                hw_mask
-            ]['index'].dt.date.tolist()
-        else:
-            return []
+        mask = (self.df['cidade'] == cidade) & (self.df['isHW'] == "TRUE")
+        return self.df.loc[mask, 'index'].dt.date.tolist()
 
     @cached_dataframe(key_prefix="heatmap_data")
     def prepare_heatmap_data(self) -> pd.DataFrame:
@@ -525,31 +409,18 @@ class DataProcessor:
         if self.df is None or self.df.empty:
             logger.warning("DataFrame vazio, não é possível obter dias de eventos de ondas de calor")
             return []
-            
-        df_cidade = self.df[self.df['cidade'] == cidade].copy()
-        
-        # Identifica os dias de onda de calor (isHW == TRUE)
-        # Normaliza isHW antes de comparar
-        if "isHW" in df_cidade.columns:
-            isHW_normalized = self._normalize_isHW(df_cidade['isHW'])
-            df_cidade['isHW_bool'] = isHW_normalized == "TRUE"
-        else:
-            df_cidade['isHW_bool'] = False
-        
-        # Agrupa por períodos consecutivos de isHW_bool
-        df_cidade['group'] = (df_cidade['isHW_bool'] != df_cidade['isHW_bool'].shift()).cumsum()
-        
-        # Filtra apenas os grupos que são ondas de calor (isHW_bool == True)
-        hw_groups = df_cidade[df_cidade['isHW_bool']].copy()
 
-        # Calcula a duração de cada período (sem agrupar por mês ou ano aqui)
-        hw_periods = hw_groups.groupby('group').size().reset_index(name='duration')
-        
-        # Filtra apenas períodos com 3 ou mais dias
-        valid_groups = hw_periods[hw_periods['duration'] >= 3]['group'].tolist()
-        
-        # Retorna as datas dos períodos válidos
-        return df_cidade[df_cidade['group'].isin(valid_groups)]['index'].dt.date.tolist()
+        needed = [c for c in ["index", "isHW"] if c in self.df.columns]
+        dff = self.df.loc[self.df['cidade'] == cidade, needed].copy()
+
+        dff["isHW_bool"] = dff["isHW"] == "TRUE"
+        dff["group"] = (dff["isHW_bool"] != dff["isHW_bool"].shift()).cumsum()
+
+        hw_groups   = dff[dff["isHW_bool"]]
+        hw_periods  = hw_groups.groupby("group").size().reset_index(name="duration")
+        valid_groups = hw_periods.loc[hw_periods["duration"] >= 3, "group"]
+
+        return dff.loc[dff["group"].isin(valid_groups), "index"].dt.date.tolist()
 
     @cached_dataframe(key_prefix="heatmap_events")
     def prepare_heatmap_events_data(self) -> pd.DataFrame:
@@ -564,15 +435,11 @@ class DataProcessor:
             logger.warning("DataFrame vazio, não é possível preparar dados do heatmap de eventos")
             return pd.DataFrame()
 
-        df_copy = self.df.copy()
+        # Copia apenas as colunas necessárias (~4 colunas × 234k linhas em vez de 26)
+        needed = [c for c in ["cidade", "year", "index", "isHW"] if c in self.df.columns]
+        df_copy = self.df[needed].copy()
 
-        # Identifica os dias de onda de calor (isHW == TRUE)
-        # Normaliza isHW antes de comparar
-        if "isHW" in df_copy.columns:
-            isHW_normalized = self._normalize_isHW(df_copy['isHW'])
-            df_copy['isHW_bool'] = isHW_normalized == "TRUE"
-        else:
-            df_copy['isHW_bool'] = False
+        df_copy['isHW_bool'] = df_copy['isHW'] == "TRUE"
 
         # Ordena por cidade e data para garantir sequência correta
         df_copy = df_copy.sort_values(['cidade', 'index'])
@@ -608,7 +475,7 @@ class DataProcessor:
 
         # Identifica o início de cada evento (primeiro dia de cada sequência válida)
         df_copy['event_start'] = df_copy.groupby('cidade')['is_event'].transform(
-            lambda x: (x & (~x.shift().fillna(False))).astype(int)
+            lambda x: (x & (~x.shift().fillna(False).infer_objects(copy=False))).astype(int)
         )
 
         # Conta o número de eventos por cidade e ano

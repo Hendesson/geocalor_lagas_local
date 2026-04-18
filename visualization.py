@@ -233,24 +233,24 @@ class Visualizer:
             (df["cidade"] == cidade)
             & (df["year"] >= ano_inicio)
             & (df["year"] <= ano_fim)
-        ].copy()
+        ]
 
         if dff.empty or "tempMax" not in dff.columns or "tempMin" not in dff.columns:
             return go.Figure()
 
         dff = dff.sort_values("index")
-        dff["amplitude"] = dff["tempMax"] - dff["tempMin"]
-        dff["amp_mm30"] = dff["amplitude"].rolling(window=30, min_periods=1).mean()
+        amplitude = dff["tempMax"] - dff["tempMin"]
+        amp_mm30  = amplitude.rolling(window=30, min_periods=1).mean()
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(
-            x=dff["index"], y=dff["amplitude"], name="Amplitude diária",
+            x=dff["index"], y=amplitude, name="Amplitude diária",
             mode="lines", line=dict(color=GREEN, width=1.2),
             fill="tozeroy", fillcolor="rgba(110, 193, 166, 0.18)",
             hovertemplate="<b>%{x|%d/%m/%Y}</b><br>Amplitude: %{y:.1f} °C<extra></extra>",
         ))
         fig.add_trace(go.Scatter(
-            x=dff["index"], y=dff["amp_mm30"], name="Média móvel 30 dias",
+            x=dff["index"], y=amp_mm30, name="Média móvel 30 dias",
             mode="lines", line=dict(color=PRIMARY, width=2.4, dash="dash"),
             hovertemplate="<b>%{x|%d/%m/%Y}</b><br>MM30: %{y:.1f} °C<extra></extra>",
         ))
@@ -279,19 +279,23 @@ class Visualizer:
             (df["cidade"] == cidade)
             & (df["year"] >= ano_inicio)
             & (df["year"] <= ano_fim)
-        ].copy()
+        ]
 
         if dff.empty or "tempMed" not in dff.columns:
             return go.Figure()
 
-        dff["month"] = dff["index"].dt.month
-        climatologia = dff.groupby("month")["tempMed"].mean()
-        dff["year_month"] = dff["index"].dt.to_period("M")
-        mensal = dff.groupby(["year_month", "month"])["tempMed"].mean().reset_index()
-        mensal["anomalia"] = mensal.apply(
-            lambda r: r["tempMed"] - climatologia.get(r["month"], np.nan), axis=1
+        month_s      = dff["index"].dt.month
+        year_month_s = dff["index"].dt.to_period("M")
+        climatologia = dff.groupby(month_s)["tempMed"].mean()
+
+        mensal = (
+            dff.assign(_m=month_s, _ym=year_month_s)
+            .groupby(["_ym", "_m"])["tempMed"].mean()
+            .reset_index()
+            .rename(columns={"_m": "month", "_ym": "year_month"})
         )
-        mensal["date"] = mensal["year_month"].dt.to_timestamp()
+        mensal["anomalia"] = mensal["tempMed"] - mensal["month"].map(climatologia)
+        mensal["date"]     = mensal["year_month"].dt.to_timestamp()
         mensal = mensal.dropna(subset=["anomalia"])
 
         if mensal.empty:
@@ -334,8 +338,7 @@ class Visualizer:
         if df.empty:
             return go.Figure()
 
-        dff = df[(df["cidade"] == cidade) & (df["year"] == ano)].copy()
-        dff["index"] = pd.to_datetime(dff["index"])
+        dff = df[(df["cidade"] == cidade) & (df["year"] == ano)]
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=dff["index"], y=dff["tempMax"], mode="lines+markers",
@@ -346,60 +349,48 @@ class Visualizer:
                                  name="Mínima", line=dict(color=TEAL), marker=dict(size=4)))
 
         _intensity_opacity = {"low-intensity": 0.4, "severe": 0.6, "extreme": 0.8}
-
-        shapes = []
-        for _, row in dff.iterrows():
-            is_hw = (
-                "isHW" in row
-                and pd.notna(row["isHW"])
-                and str(row["isHW"]).strip().upper() in ("VERDADEIRO", "TRUE", "1")
-            )
-            if is_hw:
-                opacity = _intensity_opacity.get(
-                    str(row.get("HW_Intensity", "low-intensity")).strip().lower(), 0.3
-                )
-                shapes.append({
-                    "type": "rect", "xref": "x", "yref": "paper",
-                    "x0": row["index"] - pd.Timedelta(days=0.5),
-                    "x1": row["index"] + pd.Timedelta(days=0.5),
-                    "y0": 0, "y1": 1,
-                    "fillcolor": ORANGE, "opacity": opacity,
-                    "line": {"width": 0}, "layer": "below",
-                })
-
         threshold_95 = dff["tempMax"].quantile(0.95) if not dff["tempMax"].empty else None
-        peak_annotations = []
-        if threshold_95 is not None:
-            for _, row in dff.iterrows():
-                if row["tempMax"] >= threshold_95:
-                    peak_annotations.append({
-                        "x": row["index"], "y": row["tempMax"],
-                        "xref": "x", "yref": "y",
-                        "text": "Pico", "showarrow": True, "arrowhead": 2,
-                        "ax": 0, "ay": -40,
-                        "bgcolor": "rgba(230,57,70,0.8)", "bordercolor": RED,
-                        "borderwidth": 1, "borderpad": 4, "opacity": 0.9,
-                        "font": {"color": "white", "size": 10},
-                    })
+        half_day = pd.Timedelta(days=0.5)
 
-        hw_annotations = []
-        for _, row in dff.iterrows():
-            is_hw = (
-                "isHW" in row
-                and pd.notna(row["isHW"])
-                and str(row["isHW"]).strip().upper() in ("VERDADEIRO", "TRUE", "1")
-            )
-            if is_hw and "HWDay_Intensity" in row and pd.notna(row["HWDay_Intensity"]):
-                hw_annotations.append({
-                    "x": row["index"], "y": 1.02,
-                    "xref": "x", "yref": "paper",
-                    "text": str(row["HWDay_Intensity"]),
-                    "showarrow": False,
-                    "bgcolor": "rgba(255,159,28,0.6)", "bordercolor": ORANGE,
-                    "borderwidth": 1, "borderpad": 2,
-                    "font": {"color": "white", "size": 9},
-                    "xanchor": "center", "yanchor": "bottom",
-                })
+        hw_df    = dff[dff["isHW"] == "TRUE"]
+        opacities = hw_df["HW_Intensity"].str.strip().str.lower().map(_intensity_opacity).fillna(0.3)
+        shapes = [
+            {
+                "type": "rect", "xref": "x", "yref": "paper",
+                "x0": idx - half_day, "x1": idx + half_day,
+                "y0": 0, "y1": 1,
+                "fillcolor": ORANGE, "opacity": op,
+                "line": {"width": 0}, "layer": "below",
+            }
+            for idx, op in zip(hw_df["index"], opacities)
+        ]
+        ann_df = hw_df[hw_df["HWDay_Intensity"].notna()]
+        hw_annotations = [
+            {
+                "x": idx, "y": 1.02, "xref": "x", "yref": "paper",
+                "text": str(txt), "showarrow": False,
+                "bgcolor": "rgba(255,159,28,0.6)", "bordercolor": ORANGE,
+                "borderwidth": 1, "borderpad": 2,
+                "font": {"color": "white", "size": 9},
+                "xanchor": "center", "yanchor": "bottom",
+            }
+            for idx, txt in zip(ann_df["index"], ann_df["HWDay_Intensity"])
+        ]
+        if threshold_95 is not None:
+            pk_df = dff[dff["tempMax"] >= threshold_95]
+            peak_annotations = [
+                {
+                    "x": idx, "y": tmax, "xref": "x", "yref": "y",
+                    "text": "Pico", "showarrow": True, "arrowhead": 2,
+                    "ax": 0, "ay": -40,
+                    "bgcolor": "rgba(230,57,70,0.8)", "bordercolor": RED,
+                    "borderwidth": 1, "borderpad": 4, "opacity": 0.9,
+                    "font": {"color": "white", "size": 10},
+                }
+                for idx, tmax in zip(pk_df["index"], pk_df["tempMax"])
+            ]
+        else:
+            peak_annotations = []
 
         fig.update_layout(
             title=f"Temperaturas Diárias e Ondas de Calor — {cidade}, {ano}",
@@ -421,8 +412,7 @@ class Visualizer:
         if df.empty:
             return go.Figure()
 
-        dff = df[(df["cidade"] == cidade) & (df["year"] == ano)].copy()
-        dff["index"] = pd.to_datetime(dff["index"])
+        dff = df[(df["cidade"] == cidade) & (df["year"] == ano)]
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -431,45 +421,32 @@ class Visualizer:
         ))
 
         _intensity_opacity = {"low-intensity": 0.4, "severe": 0.6, "extreme": 0.8}
+        half_day = pd.Timedelta(days=0.5)
 
-        shapes = []
-        for _, row in dff.iterrows():
-            is_hw = (
-                "isHW" in row
-                and pd.notna(row["isHW"])
-                and str(row["isHW"]).strip().upper() in ("VERDADEIRO", "TRUE", "1")
-            )
-            if is_hw:
-                opacity = _intensity_opacity.get(
-                    str(row.get("HW_Intensity", "low-intensity")).strip().lower(), 0.3
-                )
-                shapes.append({
-                    "type": "rect", "xref": "x", "yref": "paper",
-                    "x0": row["index"] - pd.Timedelta(days=0.5),
-                    "x1": row["index"] + pd.Timedelta(days=0.5),
-                    "y0": 0, "y1": 1,
-                    "fillcolor": ORANGE, "opacity": opacity,
-                    "line": {"width": 0}, "layer": "below",
-                })
-
-        hw_annotations = []
-        for _, row in dff.iterrows():
-            is_hw = (
-                "isHW" in row
-                and pd.notna(row["isHW"])
-                and str(row["isHW"]).strip().upper() in ("VERDADEIRO", "TRUE", "1")
-            )
-            if is_hw and "HWDay_Intensity" in row and pd.notna(row["HWDay_Intensity"]):
-                hw_annotations.append({
-                    "x": row["index"], "y": 1.02,
-                    "xref": "x", "yref": "paper",
-                    "text": str(row["HWDay_Intensity"]),
-                    "showarrow": False,
-                    "bgcolor": "rgba(255,159,28,0.6)", "bordercolor": ORANGE,
-                    "borderwidth": 1, "borderpad": 2,
-                    "font": {"color": "white", "size": 9},
-                    "xanchor": "center", "yanchor": "bottom",
-                })
+        hw_df     = dff[dff["isHW"] == "TRUE"]
+        opacities = hw_df["HW_Intensity"].str.strip().str.lower().map(_intensity_opacity).fillna(0.3)
+        shapes = [
+            {
+                "type": "rect", "xref": "x", "yref": "paper",
+                "x0": idx - half_day, "x1": idx + half_day,
+                "y0": 0, "y1": 1,
+                "fillcolor": ORANGE, "opacity": op,
+                "line": {"width": 0}, "layer": "below",
+            }
+            for idx, op in zip(hw_df["index"], opacities)
+        ]
+        ann_df = hw_df[hw_df["HWDay_Intensity"].notna()]
+        hw_annotations = [
+            {
+                "x": idx, "y": 1.02, "xref": "x", "yref": "paper",
+                "text": str(txt), "showarrow": False,
+                "bgcolor": "rgba(255,159,28,0.6)", "bordercolor": ORANGE,
+                "borderwidth": 1, "borderpad": 2,
+                "font": {"color": "white", "size": 9},
+                "xanchor": "center", "yanchor": "bottom",
+            }
+            for idx, txt in zip(ann_df["index"], ann_df["HWDay_Intensity"])
+        ]
 
         fig.update_layout(
             title=f"Umidade Diária e Ondas de Calor — {cidade}, {ano}",
