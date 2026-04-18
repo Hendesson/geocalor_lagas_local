@@ -387,7 +387,22 @@ def register_callbacks_sih_sim(app) -> None:
         opts = [{"label": str(a), "value": a} for a in anos]
         return opts, (anos[-1] if anos else None)
 
-    @app.callback(
+    app.clientside_callback(
+        """
+        function(n_clicks, rm, sistema, causa, modo_atual) {
+            var ctx = window.dash_clientside.callback_context;
+            if (!ctx || !ctx.triggered || ctx.triggered.length === 0)
+                return window.dash_clientside.no_update;
+            var tid = ctx.triggered[0].prop_id.split('.')[0];
+            var novo = (tid === 'sihsim-mapa-all-btn')
+                ? (modo_atual !== 'all' ? 'all' : 'single')
+                : 'single';
+            var btn_cls = (novo === 'all')
+                ? 'btn btn-primary fw-bold w-100'
+                : 'btn btn-outline-primary fw-bold w-100';
+            return [novo, btn_cls, novo === 'all'];
+        }
+        """,
         Output("sihsim-mapa-modo",    "data"),
         Output("sihsim-mapa-all-btn", "className"),
         Output("sihsim-mapa-ano",     "disabled"),
@@ -398,18 +413,6 @@ def register_callbacks_sih_sim(app) -> None:
         State("sihsim-mapa-modo",     "data"),
         prevent_initial_call=True,
     )
-    def _toggle_modo(n_all, rm, sistema, causa, modo_atual):
-        from dash import ctx
-        if ctx.triggered_id == "sihsim-mapa-all-btn":
-            novo = "all" if modo_atual != "all" else "single"
-        else:
-            novo = "single"
-        btn_cls = (
-            "btn btn-primary fw-bold w-100"
-            if novo == "all"
-            else "btn btn-outline-primary fw-bold w-100"
-        )
-        return novo, btn_cls, (novo == "all")
 
     @app.callback(
         Output("sihsim-g1-title", "children"),

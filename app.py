@@ -222,23 +222,22 @@ def display_page(pathname):
     return render_page(pathname)
 
 
-@callback(
+app.clientside_callback(
+    """
+    function(n_clicks, pathname, is_open) {
+        var ctx = window.dash_clientside.callback_context;
+        if (!ctx || !ctx.triggered || ctx.triggered.length === 0) return false;
+        var tid = ctx.triggered[0].prop_id.split('.')[0];
+        if (tid === 'navbar-toggler' && n_clicks) return !is_open;
+        if (tid === 'url') return false;
+        return is_open;
+    }
+    """,
     Output("navbar-collapse", "is_open"),
     Input("navbar-toggler", "n_clicks"),
     Input("url", "pathname"),
     State("navbar-collapse", "is_open"),
 )
-def toggle_navbar(n_clicks, _pathname, is_open):
-    from dash import callback_context
-
-    trig = callback_context.triggered_id
-    if trig is None:
-        return False
-    if trig == "navbar-toggler" and n_clicks:
-        return not bool(is_open)
-    if trig == "url":
-        return False
-    return bool(is_open)
 
 
 temperaturas.register_callbacks_temperaturas(app, df, visualizer)
