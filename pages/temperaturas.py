@@ -52,8 +52,14 @@ def _marks_periodo():
     return m
 
 
+_estacoes_cache: list | None = None
+
+
 def _estacoes_map_children(df: pd.DataFrame):
     """Marcadores com tooltip + popup com detalhes ao clicar."""
+    global _estacoes_cache
+    if _estacoes_cache is not None:
+        return _estacoes_cache
     if df.empty or "Lat" not in df.columns or "Long" not in df.columns:
         return []
     meta = df.drop_duplicates(subset=["cidade"], keep="first").dropna(subset=["Lat", "Long"])
@@ -110,6 +116,7 @@ def _estacoes_map_children(df: pd.DataFrame):
                 ],
             )
         )
+    _estacoes_cache = out
     return out
 
 
@@ -176,7 +183,7 @@ def layout_temperaturas(app, df, cidades, anos):
                         dl.Map(
                             map_layers,
                             id="mapa-estacoes-temp",
-                            style={"width": "100%", "height": "440px", "borderRadius": "8px"},
+                            style={"width": "100%", "height": "clamp(240px, 50vw, 440px)", "borderRadius": "8px"},
                             center=map_center,
                             zoom=4,
                         ),

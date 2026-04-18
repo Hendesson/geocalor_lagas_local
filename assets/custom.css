@@ -352,6 +352,16 @@ h3, h4, h5, .text-center.my-4 {
     display: none;
 }
 
+/* ── Iframes (mapas Folium embutidos) ────────────────────────────────────── */
+.mapa-folium-iframe {
+    height: 580px;
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    display: block;
+}
+.mapa-folium-iframe--tall { height: 620px; }
+
 /* ═══════════════════════════════════════════════════════════════════════════
    MOBILE & TABLET RESPONSIVE
    Breakpoints Bootstrap: xs<576 | sm≥576 | md≥768 | lg≥992 | xl≥1200
@@ -420,23 +430,27 @@ h3, h4, h5, .text-center.my-4 {
     .geocalor-topnav .navbar-collapse { padding: 0.5rem 0; }
     .geocalor-nav-link { display: block; text-align: center; margin: 0.15rem 0; }
 
-    /* KPI cards: reduz padding e fonte em telas pequenas */
-    .kpi-card    { min-width: 88px; padding: 0.65rem 0.6rem; }
-    .kpi-value   { font-size: 1.25rem; }
+    /* KPI cards: layout 2×2 em telas pequenas */
+    .kpi-card    { min-width: calc(48% - 0.25rem); max-width: calc(50% - 0.25rem); padding: 0.65rem 0.5rem; flex: 1 1 calc(48% - 0.25rem); }
+    .kpi-value   { font-size: 1.2rem; }
     .kpi-label   { font-size: 0.62rem; }
     .kpi-icon    { font-size: 1.1rem; }
 
+    /* Row de KPI cards: quebra em 2 colunas */
+    .d-flex.flex-wrap .kpi-card,
+    .row .kpi-card { flex: 1 1 calc(48% - 0.25rem) !important; }
+
     /* Cabeçalho dos chart-cards */
     .geo-map-section-header {
-        font-size: 0.95rem;
-        padding: 0.6rem 0.8rem;
+        font-size: 0.9rem;
+        padding: 0.55rem 0.75rem;
     }
 
     /* Banner SIH/SIM */
-    .sihsim-section-banner { font-size: 0.9rem; padding: 0.6rem 0.9rem; }
+    .sihsim-section-banner { font-size: 0.88rem; padding: 0.55rem 0.8rem; }
 
     /* Corpo do card de gráfico: menos padding */
-    .chart-card-body { padding: 0.65rem !important; }
+    .chart-card-body { padding: 0.5rem !important; }
 
     /* Nav tabs SIH/SIM: rolagem horizontal sem quebrar */
     .nav-tabs {
@@ -447,13 +461,20 @@ h3, h4, h5, .text-center.my-4 {
     }
     .nav-tabs::-webkit-scrollbar { display: none; }
     .nav-tabs .nav-link {
-        padding: 0.5rem 0.75rem !important;
-        font-size: 0.82rem !important;
+        padding: 0.5rem 0.7rem !important;
+        font-size: 0.8rem !important;
         white-space: nowrap;
     }
 
+    /* Iframes Folium: altura responsiva em mobile */
+    .mapa-folium-iframe,
+    .mapa-folium-iframe--tall { height: max(52vw, 240px); }
+
+    /* Mapa Leaflet: altura responsiva */
+    .dash-leaflet-container { max-height: 320px !important; }
+
     /* Calendário: dias menores para caber na tela */
-    .calendar-day { width: 32px !important; height: 32px !important; font-size: 0.72rem; margin: 1px; }
+    .calendar-day { width: 34px !important; height: 34px !important; font-size: 0.75rem; margin: 1px; }
     .calendar-weekday { font-size: 0.7rem; }
     .calendar-header  { font-size: 0.85rem; }
 
@@ -464,8 +485,9 @@ h3, h4, h5, .text-center.my-4 {
     /* Logos */
     .logo-img { max-height: 72px; max-width: 140px; margin: 10px 0; }
 
-    /* Marca do range slider: fonte menor */
+    /* Marca do range slider: fonte menor e mais espaço no polegar */
     .rc-slider-mark-text { font-size: 0.62rem !important; }
+    .rc-slider-handle { width: 20px !important; height: 20px !important; margin-top: -8px !important; }
 
     /* Modebar do Plotly: diminui um pouco */
     .js-plotly-plot .plotly .modebar {
@@ -473,24 +495,58 @@ h3, h4, h5, .text-center.my-4 {
         transform-origin: top right;
     }
 
+    /* Gráficos Plotly: altura mínima reduzida para não dominar a tela */
+    .js-plotly-plot { min-height: 220px; }
+
     /* Padding lateral do dashboard */
-    .dashboard-main { padding-left: 0.35rem !important; padding-right: 0.35rem !important; }
+    .dashboard-main { padding-left: 0.25rem !important; padding-right: 0.25rem !important; }
 
     /* Section heading */
-    .section-heading { font-size: 0.95rem; }
+    .section-heading { font-size: 0.9rem; }
 
     /* Cards de equipe em mobile (≤767px): cards menores no carrossel */
     .team-card { width: 230px !important; min-height: 330px !important; padding: 14px !important; }
+
+    /* Dropdowns: fonte menor, altura adequada ao toque */
+    .Select-control, .Select-menu-outer { font-size: 0.88rem !important; }
+    .VirtualizedSelectOption { min-height: 38px !important; line-height: 38px !important; }
+
+    /* Botão de download: menor em mobile */
+    .btn-download-asset { font-size: 0.75rem; padding: 0.25rem 0.6rem; }
+
+    /* Heatmap SIH/SIM: altura menor */
+    #sihsim-g4 .js-plotly-plot { max-height: 300px; }
+
+    /* Nota técnica: sem margens laterais excessivas */
+    .nota-tecnica-card .card-body { padding: 0.75rem !important; }
+
+    /* Popover do calendário: cabe na tela */
+    .popover { max-width: calc(100vw - 20px) !important; }
+    .popover-custom { max-width: calc(100vw - 20px); }
+}
+
+/* ── Mobile muito pequeno (≤480px) ────────────────────────────────────────── */
+@media (max-width: 480px) {
+    /* Mapa leaflet ainda menor */
+    .dash-leaflet-container { max-height: 260px !important; }
+
+    /* Iframes ainda menores */
+    .mapa-folium-iframe,
+    .mapa-folium-iframe--tall { height: max(60vw, 200px); }
+
+    /* Calendário: 2 meses por linha forçado */
+    .calendar-container .row > div { padding-left: 0.2rem !important; padding-right: 0.2rem !important; }
+    .calendar-day { width: 30px !important; height: 30px !important; font-size: 0.68rem; }
 }
 
 /* ── Mobile muito pequeno (≤400px) ────────────────────────────────────────── */
 @media (max-width: 400px) {
     h3, h4, h5 { font-size: 0.9rem !important; }
-    .kpi-card   { min-width: 76px; }
+    .kpi-card   { min-width: calc(48% - 0.2rem); }
     .kpi-value  { font-size: 1.05rem; }
-    .geo-map-section-header { font-size: 0.85rem; }
+    .geo-map-section-header { font-size: 0.82rem; }
     .team-card  { width: 200px !important; }
-    .calendar-day { width: 27px !important; height: 27px !important; font-size: 0.65rem; }
+    .calendar-day { width: 27px !important; height: 27px !important; font-size: 0.62rem; }
 }
 
 /* ── Garante que gráficos Plotly não ultrapassem o container ────────────── */

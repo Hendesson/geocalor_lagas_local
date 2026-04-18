@@ -5,6 +5,7 @@ Execute prepare_sih_sim_data.py UMA VEZ antes de usar o dashboard.
 import json
 import logging
 import unicodedata
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -69,6 +70,8 @@ _geojson_all_cache: Optional[dict] = None
 _geojson_rm_cache: Dict[str, Optional[dict]] = {}
 # Cache de mapa_data por (sistema, causa, rm, ano)
 _mapa_data_cache: Dict[tuple, Optional[dict]] = {}
+# Cache de DataFrames das funções de agregação (evita re-filtrar/re-agregar por callback)
+_df_agg_cache: Dict[tuple, pd.DataFrame] = {}
 
 
 # ── normalização e decodificação ────────────────────────────────────────────
@@ -172,6 +175,7 @@ def _pop_total_rm(rm: str, ano: int) -> Optional[float]:
 
 # ── API pública ─────────────────────────────────────────────────────────────
 
+@lru_cache(maxsize=16)
 def rms_disponiveis(sistema: str, causa: str) -> List[str]:
     df = _load(f"{_prefix(sistema, causa)}_taxa_anual.parquet")
     if df.empty or "NOME_RM" not in df.columns:
@@ -179,6 +183,7 @@ def rms_disponiveis(sistema: str, causa: str) -> List[str]:
     return sorted(df["NOME_RM"].dropna().unique().tolist())
 
 
+@lru_cache(maxsize=64)
 def anos_disponiveis(sistema: str, causa: str, rm: str) -> List[int]:
     df = _load(f"{_prefix(sistema, causa)}_taxa_anual.parquet")
     if df.empty:
@@ -192,12 +197,18 @@ def anos_disponiveis(sistema: str, causa: str, rm: str) -> List[int]:
 
 def serie_mensal(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     """Retorna serie temporal mensal: colunas NOME_RM, ANO_*, MES_*, N."""
-    df = _load(f"{_prefix(sistema, causa)}_serie_mensal.parquet")
-    return _filter_rm(df, rm)
+    key = ("serie_mensal", sistema, causa, rm)
+    if key not in _df_agg_cache:
+        df = _load(f"{_prefix(sistema, causa)}_serie_mensal.parquet")
+        _df_agg_cache[key] = _filter_rm(df, rm)
+    return _df_agg_cache[key]
 
 
 def taxa_anual(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     """Taxa anual por 1.000 hab.: (ANO_*, N, taxa). taxa=NaN se pop indisponível."""
+    key = ("taxa_anual", sistema, causa, rm)
+    if key in _df_agg_cache:
+        return _df_agg_cache[key]
     df = _load(f"{_prefix(sistema, causa)}_taxa_anual.parquet")
     ano_col = _ANO_COL[sistema]
     dff = _filter_rm(df, rm)
@@ -231,89 +242,119 @@ def taxa_anual(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     pop_vals = out[ano_col].map(_get_pop)
     out["taxa"] = np.where(pop_vals.notna() & (pop_vals > 0),
                            out["N"] / pop_vals * 1000.0, np.nan)
-    return out.sort_values(ano_col)
+    result = out.sort_values(ano_col)
+    _df_agg_cache[key] = result
+    return result
 
 
 def sexo_por_ano(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     """Contagem por sexo e ano: (ANO_*, SEXO, N)."""
-    df = _load(f"{_prefix(sistema, causa)}_sexo_ano.parquet")
-    ano_col = _ANO_COL[sistema]
-    dff = _filter_rm(df, rm)
-    if dff.empty or "SEXO" not in dff.columns:
-        return pd.DataFrame(columns=[ano_col, "SEXO", "N"])
-    return dff[[ano_col, "SEXO", "N"]].sort_values([ano_col, "SEXO"])
+    key = ("sexo_por_ano", sistema, causa, rm)
+    if key not in _df_agg_cache:
+        df = _load(f"{_prefix(sistema, causa)}_sexo_ano.parquet")
+        ano_col = _ANO_COL[sistema]
+        dff = _filter_rm(df, rm)
+        if dff.empty or "SEXO" not in dff.columns:
+            _df_agg_cache[key] = pd.DataFrame(columns=[ano_col, "SEXO", "N"])
+        else:
+            _df_agg_cache[key] = dff[[ano_col, "SEXO", "N"]].sort_values([ano_col, "SEXO"])
+    return _df_agg_cache[key]
 
 
 def raca_cor(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     """Distribuição por raça/cor: (RACA_COR, N, pct)."""
-    df = _load(f"{_prefix(sistema, causa)}_raca.parquet")
-    dff = _filter_rm(df, rm).copy()
-    if dff.empty:
-        return pd.DataFrame(columns=["RACA_COR", "N", "pct"])
-    dff["RACA_COR"] = _decode_cat(dff["RACA_COR"], _RACA_MAP)
-    tab = dff.groupby("RACA_COR", dropna=False)["N"].sum().reset_index()
-    return _add_pct(tab).sort_values("pct", ascending=False)
+    key = ("raca_cor", sistema, causa, rm)
+    if key not in _df_agg_cache:
+        df = _load(f"{_prefix(sistema, causa)}_raca.parquet")
+        dff = _filter_rm(df, rm).copy()
+        if dff.empty:
+            _df_agg_cache[key] = pd.DataFrame(columns=["RACA_COR", "N", "pct"])
+        else:
+            dff["RACA_COR"] = _decode_cat(dff["RACA_COR"], _RACA_MAP)
+            tab = dff.groupby("RACA_COR", dropna=False)["N"].sum().reset_index()
+            _df_agg_cache[key] = _add_pct(tab).sort_values("pct", ascending=False)
+    return _df_agg_cache[key]
 
 
 def faixa_etaria(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     """Distribuição por faixa etária: (FAIXA_ETARIA, N, pct)."""
-    df = _load(f"{_prefix(sistema, causa)}_faixa_etaria.parquet")
-    dff = _filter_rm(df, rm)
-    if dff.empty:
-        return pd.DataFrame(columns=["FAIXA_ETARIA", "N", "pct"])
-    tab = dff.groupby("FAIXA_ETARIA", dropna=False)["N"].sum().reset_index()
-    tab["_ord"] = tab["FAIXA_ETARIA"].apply(
-        lambda x: FAIXA_ORDER.index(x) if x in FAIXA_ORDER else 99
-    )
-    return _add_pct(tab.sort_values("_ord").drop(columns="_ord")).sort_values(
-        "pct", ascending=False
-    )
+    key = ("faixa_etaria", sistema, causa, rm)
+    if key not in _df_agg_cache:
+        df = _load(f"{_prefix(sistema, causa)}_faixa_etaria.parquet")
+        dff = _filter_rm(df, rm)
+        if dff.empty:
+            _df_agg_cache[key] = pd.DataFrame(columns=["FAIXA_ETARIA", "N", "pct"])
+        else:
+            tab = dff.groupby("FAIXA_ETARIA", dropna=False)["N"].sum().reset_index()
+            tab["_ord"] = tab["FAIXA_ETARIA"].apply(
+                lambda x: FAIXA_ORDER.index(x) if x in FAIXA_ORDER else 99
+            )
+            _df_agg_cache[key] = _add_pct(tab.sort_values("_ord").drop(columns="_ord")).sort_values(
+                "pct", ascending=False
+            )
+    return _df_agg_cache[key]
 
 
 # ── SIH-específico ──────────────────────────────────────────────────────────
 
 def car_int(causa: str, rm: str) -> pd.DataFrame:
     """Caráter de internação: (CAR_INT, N, pct)."""
-    df = _load(f"sih_{causa.lower()}_car_int.parquet")
-    dff = _filter_rm(df, rm)
-    if dff.empty:
-        return pd.DataFrame(columns=["CAR_INT", "N", "pct"])
-    tab = dff.groupby("CAR_INT", dropna=False)["N"].sum().reset_index()
-    return _add_pct(tab).sort_values("pct", ascending=False)
+    key = ("car_int", causa, rm)
+    if key not in _df_agg_cache:
+        df = _load(f"sih_{causa.lower()}_car_int.parquet")
+        dff = _filter_rm(df, rm)
+        if dff.empty:
+            _df_agg_cache[key] = pd.DataFrame(columns=["CAR_INT", "N", "pct"])
+        else:
+            tab = dff.groupby("CAR_INT", dropna=False)["N"].sum().reset_index()
+            _df_agg_cache[key] = _add_pct(tab).sort_values("pct", ascending=False)
+    return _df_agg_cache[key]
 
 
 def espec(causa: str, rm: str) -> pd.DataFrame:
     """Especialidade do leito — top 12: (ESPEC, N, pct)."""
-    df = _load(f"sih_{causa.lower()}_espec.parquet")
-    dff = _filter_rm(df, rm)
-    if dff.empty:
-        return pd.DataFrame(columns=["ESPEC", "N", "pct"])
-    tab = dff.groupby("ESPEC", dropna=False)["N"].sum().reset_index()
-    return _add_pct(tab).sort_values("pct", ascending=False).head(12)
+    key = ("espec", causa, rm)
+    if key not in _df_agg_cache:
+        df = _load(f"sih_{causa.lower()}_espec.parquet")
+        dff = _filter_rm(df, rm)
+        if dff.empty:
+            _df_agg_cache[key] = pd.DataFrame(columns=["ESPEC", "N", "pct"])
+        else:
+            tab = dff.groupby("ESPEC", dropna=False)["N"].sum().reset_index()
+            _df_agg_cache[key] = _add_pct(tab).sort_values("pct", ascending=False).head(12)
+    return _df_agg_cache[key]
 
 
 # ── SIM-específico ──────────────────────────────────────────────────────────
 
 def lococor(causa: str, rm: str) -> pd.DataFrame:
     """Local do óbito: (LOCOCOR, N, pct)."""
-    df = _load(f"sim_{causa.lower()}_lococor.parquet")
-    dff = _filter_rm(df, rm).copy()
-    if dff.empty:
-        return pd.DataFrame(columns=["LOCOCOR", "N", "pct"])
-    dff["LOCOCOR"] = _decode_cat(dff["LOCOCOR"], _LOCOCOR_MAP)
-    tab = dff.groupby("LOCOCOR", dropna=False)["N"].sum().reset_index()
-    return _add_pct(tab).sort_values("pct", ascending=False)
+    key = ("lococor", causa, rm)
+    if key not in _df_agg_cache:
+        df = _load(f"sim_{causa.lower()}_lococor.parquet")
+        dff = _filter_rm(df, rm).copy()
+        if dff.empty:
+            _df_agg_cache[key] = pd.DataFrame(columns=["LOCOCOR", "N", "pct"])
+        else:
+            dff["LOCOCOR"] = _decode_cat(dff["LOCOCOR"], _LOCOCOR_MAP)
+            tab = dff.groupby("LOCOCOR", dropna=False)["N"].sum().reset_index()
+            _df_agg_cache[key] = _add_pct(tab).sort_values("pct", ascending=False)
+    return _df_agg_cache[key]
 
 
 def estciv(causa: str, rm: str) -> pd.DataFrame:
     """Estado civil: (ESTCIV, N, pct)."""
-    df = _load(f"sim_{causa.lower()}_estciv.parquet")
-    dff = _filter_rm(df, rm).copy()
-    if dff.empty:
-        return pd.DataFrame(columns=["ESTCIV", "N", "pct"])
-    dff["ESTCIV"] = _decode_cat(dff["ESTCIV"], _ESTCIV_MAP)
-    tab = dff.groupby("ESTCIV", dropna=False)["N"].sum().reset_index()
-    return _add_pct(tab).sort_values("pct", ascending=False)
+    key = ("estciv", causa, rm)
+    if key not in _df_agg_cache:
+        df = _load(f"sim_{causa.lower()}_estciv.parquet")
+        dff = _filter_rm(df, rm).copy()
+        if dff.empty:
+            _df_agg_cache[key] = pd.DataFrame(columns=["ESTCIV", "N", "pct"])
+        else:
+            dff["ESTCIV"] = _decode_cat(dff["ESTCIV"], _ESTCIV_MAP)
+            tab = dff.groupby("ESTCIV", dropna=False)["N"].sum().reset_index()
+            _df_agg_cache[key] = _add_pct(tab).sort_values("pct", ascending=False)
+    return _df_agg_cache[key]
 
 
 # ── Mapa ─────────────────────────────────────────────────────────────────────

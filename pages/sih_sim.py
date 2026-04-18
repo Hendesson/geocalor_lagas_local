@@ -18,6 +18,9 @@ import data_sih_sim as ds
 
 logger = logging.getLogger(__name__)
 
+# Cache de nomes de município por objeto GeoJSON (evita re-parse por callback)
+_geojson_name_cache: dict = {}
+
 
 def _nota(texto: str) -> html.P:
     """Descrição informativa abaixo de um gráfico."""
@@ -592,16 +595,20 @@ def register_callbacks_sih_sim(app) -> None:
         if taxa_df["COD_MUN6"].dtype != object:
             taxa_df = taxa_df.assign(COD_MUN6=taxa_df["COD_MUN6"].astype(str).str.strip())
 
-        # Dicionário código → nome do município extraído do GeoJSON
+        # Dicionário código → nome do município extraído do GeoJSON (cached por objeto)
         _nm_keys = ("NM_MUN", "NM_MUNICIP", "NOME_MUN", "NM_MUNICIPIO", "NOME_MUNICIPIO")
-        code_to_name: dict = {}
-        for feat in geojson.get("features", []):
-            props = feat.get("properties", {})
-            fid   = feat.get("id", "")
-            for k in _nm_keys:
-                if props.get(k):
-                    code_to_name[fid] = str(props[k]).title()
-                    break
+        _geo_key = id(geojson)
+        if _geo_key not in _geojson_name_cache:
+            _built: dict = {}
+            for feat in geojson.get("features", []):
+                props = feat.get("properties", {})
+                fid   = feat.get("id", "")
+                for k in _nm_keys:
+                    if props.get(k):
+                        _built[fid] = str(props[k]).title()
+                        break
+            _geojson_name_cache[_geo_key] = _built
+        code_to_name = _geojson_name_cache[_geo_key]
 
         data_codes = set(taxa_df["COD_MUN6"].tolist())
         missing    = [c for c in all_codes if c not in data_codes]
@@ -669,8 +676,12 @@ def register_callbacks_sih_sim(app) -> None:
         fig.update_layout(**{
             **LAYOUT_BASE,
             "height": height,
-            "geo":    dict(fitbounds="locations", visible=False),
-            "margin": dict(l=0, r=0, t=10, b=0),
+            "geo":    dict(
+                fitbounds="locations",
+                visible=False,
+                projection_type="mercator",
+            ),
+            "margin": dict(l=0, r=0, t=20, b=0),
         })
         return fig
 
@@ -723,21 +734,24 @@ def register_callbacks_sih_sim(app) -> None:
             for a, t_df in all_years_data["yearly"]:
                 fig = _build_choropleth_svg(
                     t_df, geojson, all_codes,
-                    range_min=range_min, range_max=range_max, height=300,
+                    range_min=range_min, range_max=range_max, height=420,
                     var_label=_vlabel,
                 )
                 cards.append(
                     dbc.Col([
                         html.H6(str(a), className="text-center text-primary fw-bold mb-1"),
-                        dcc.Graph(figure=fig,
-                                  config={**_cfg, "toImageButtonOptions": {"filename": f"mapa_{rm}_{a}"}}),
-                    ], xs=12, sm=6, lg=4, className="mb-4")
+                        dcc.Graph(
+                            figure=fig,
+                            style={"height": "420px"},
+                            config={**_cfg, "toImageButtonOptions": {"filename": f"mapa_{rm}_{a}"}},
+                        ),
+                    ], xs=12, md=6, className="mb-4")
                 )
 
             if not cards:
                 aviso = "Sem dados geográficos disponíveis para esta RM."
                 return [dcc.Graph(figure=_empty("Sem dados disponíveis", 400))], titulo, aviso
-            return [dbc.Row(cards, className="g-2")], titulo, aviso
+            return [dbc.Row(cards, className="g-3")], titulo, aviso
 
         # ── Modo ano único ────────────────────────────────────────────────────
         titulo = f"Taxa de {label_evento} por doenças {label_causa} por 1.000 hab. — {rm} ({ano})"
