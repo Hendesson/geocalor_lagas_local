@@ -72,6 +72,24 @@ app = dash.Dash(
 server = app.server
 app.title = "Dashboard de Ondas de Calor — GeoCalor"
 
+app.index_string = """<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        <link rel="icon" type="image/png" href="/assets/geocalor.png">
+        {%css%}
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>"""
+
 
 def build_navbar(app_dash: dash.Dash) -> dbc.Navbar:
     """Menu principal: colapsa em telas pequenas; suporta muitas páginas no futuro."""
