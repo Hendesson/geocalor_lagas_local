@@ -14,8 +14,8 @@ import pandas as pd
 from data_processing import DataProcessor
 from visualization import Visualizer
 from db import execute as db_execute
-from nota_tecnica_html import NOTA_ONDAS, NOTA_TEMPERATURAS, NOTA_SIH_SIM
-from pages import contato, inicio, ondas, sistemas_alerta, temperaturas, sih_sim
+from nota_tecnica_html import NOTA_ONDAS, NOTA_TEMPERATURAS, NOTA_SIH_SIM, NOTA_CORRELACAO, NOTA_MORTALIDADE, NOTA_SISTEMAS_ALERTA_LINKS
+from pages import contato, inicio, ondas, sistemas_alerta, temperaturas, sih_sim, correlacao, mortalidade
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,12 +25,14 @@ MAPA_EVENTOS_DIR = os.path.join(BASE_DIR, "mapa_eventos")
 
 # ── Páginas: ordem do menu (fácil acrescentar entradas) ─────────────────────
 PAGE_ENTRIES = [
-    {"path": "/", "label": "Sobre o GeoCalor"},
-    {"path": "/temperaturas", "label": "Caracterização Climática das RMB"},
-    {"path": "/ondas", "label": "Ondas de calor"},
+    {"path": "/",              "label": "Sobre o GeoCalor"},
+    {"path": "/temperaturas",  "label": "Caracterização climática das RMB"},
+    {"path": "/ondas",         "label": "Ondas de calor"},
+    {"path": "/sih-sim",       "label": "Perfil epidemiológico"},
+    {"path": "/mortalidade",   "label": "Mortalidade por OC"},
+    {"path": "/correlacao",    "label": "Análise de correlação"},
     {"path": "/sistemas-alerta", "label": "Sistemas de alerta"},
-    {"path": "/sih-sim",         "label": "Perfil"},
-    {"path": "/contato",         "label": "Equipe e contato"},
+    {"path": "/contato",       "label": "Equipe e contato"},
 ]
 
 # ── Dados (uma única carga) ───────────────────────────────────────────────────
@@ -45,14 +47,18 @@ try:
     if not isinstance(anos, list):
         anos = []
     logger.info("Dados: %s linhas, %s cidades", len(df), len(cidades))
-    # Pré-aquece os dois heatmaps pesados para que o primeiro clique seja rápido
+    # Aquece o mapa Folium em background para que o primeiro acesso a /temperaturas seja rápido
     if not df.empty:
         try:
-            data_processor.prepare_heatmap_data()
-            data_processor.prepare_heatmap_events_data()
-            logger.info("Caches de heatmap pré-computados.")
+            import threading
+            threading.Thread(
+                target=temperaturas.build_mapa_estacoes,
+                args=(df,),
+                daemon=True,
+            ).start()
+            logger.info("Build do mapa de estações iniciado em background.")
         except Exception as _e:
-            logger.warning("Erro ao pré-computar caches de heatmap: %s", _e)
+            logger.warning("Erro ao iniciar build do mapa: %s", _e)
 except Exception as e:
     logger.error("Erro ao inicializar dados: %s", e)
     df = pd.DataFrame()
@@ -78,6 +84,22 @@ app.index_string = """<!DOCTYPE html>
         {%metas%}
         <title>{%title%}</title>
         <link rel="icon" type="image/png" href="/assets/geocalor.png">
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-LHX5DN0BCW"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-LHX5DN0BCW');
+
+          /* Notifica o GA a cada troca de rota do Dash (SPA) */
+          window.addEventListener('dash-layout-modified', function() {
+            gtag('event', 'page_view', {
+              page_path: window.location.pathname,
+              page_title: document.title,
+            });
+          });
+        </script>
         {%css%}
     </head>
     <body>
@@ -163,6 +185,10 @@ def render_page(pathname):
         return sistemas_alerta.layout_sistemas_alerta(app)
     if path == "/sih-sim":
         return sih_sim.layout_sih_sim(app)
+    if path == "/correlacao":
+        return correlacao.layout_correlacao(app)
+    if path == "/mortalidade":
+        return mortalidade.layout_mortalidade(app)
     if path == "/contato":
         return contato.layout_contato(app)
     return inicio.layout_inicio(app)
@@ -182,6 +208,33 @@ def nota_tecnica_ondas():
 @server.route("/nota-tecnica-sih-sim")
 def nota_tecnica_sih_sim():
     return NOTA_SIH_SIM
+
+
+@server.route("/mapa-estacoes")
+def serve_mapa_estacoes():
+    html_content = temperaturas.build_mapa_estacoes(df)
+    return flask.Response(html_content, mimetype="text/html; charset=utf-8")
+
+
+@server.route("/nota-tecnica-correlacao")
+def nota_tecnica_correlacao():
+    return NOTA_CORRELACAO
+
+
+@server.route("/nota-tecnica-mortalidade")
+def nota_tecnica_mortalidade():
+    return NOTA_MORTALIDADE
+
+
+@server.route("/nota-tecnica-sistemas-alerta")
+def nota_tecnica_sistemas_alerta():
+    return NOTA_SISTEMAS_ALERTA_LINKS
+
+
+@server.route("/mapa-protocolos")
+def serve_mapa_protocolos():
+    html_content = sistemas_alerta.build_mapa_protocolos()
+    return flask.Response(html_content, mimetype="text/html; charset=utf-8")
 
 
 _MAPA_INDISPONIVEL = """<!DOCTYPE html><html><body style="
@@ -258,10 +311,13 @@ app.clientside_callback(
 )
 
 
+
 temperaturas.register_callbacks_temperaturas(app, df, visualizer)
 ondas.register_callbacks_ondas(app, df, cidades, anos, data_processor, visualizer)
 sistemas_alerta.register_callbacks_sistemas_alerta(app)
 sih_sim.register_callbacks_sih_sim(app)
+correlacao.register_callbacks_correlacao(app)
+mortalidade.register_callbacks_mortalidade(app)
 contato.register_callbacks_contato(app)
 
 
