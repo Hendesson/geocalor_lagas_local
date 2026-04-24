@@ -61,7 +61,7 @@ def layout_ondas(app, df, cidades, anos):
         dbc.Row([
             dbc.Col([
                 html.Img(src=app.get_asset_url('geocalor.png'), className="logo-img"),
-                html.H2("Análise de Ondas de Calor", className="text-center my-4")
+                html.H2("Análise de ondas de calor", className="text-center my-4")
             ], width=12)
         ], className="text-center"),
 
@@ -90,7 +90,7 @@ def layout_ondas(app, df, cidades, anos):
                     [
                         dd("cidade-hw-total",
                            [{"label": c, "value": c} for c in cidades],
-                           cidades[0] if cidades else None,
+                           "Brasília" if "Brasília" in cidades else (cidades[0] if cidades else None),
                            label="Cidade"),
                         dcc.Loading(dcc.Graph(id="grafico-polar-total"), type="circle"),
                         chart_note(
@@ -112,7 +112,7 @@ def layout_ondas(app, df, cidades, anos):
                             dbc.Col(
                                 dd("cidade-hw",
                                    [{"label": c, "value": c} for c in cidades],
-                                   cidades[0] if cidades else None,
+                                   "Brasília" if "Brasília" in cidades else (cidades[0] if cidades else None),
                                    label="Cidade"),
                                 xs=12, sm=6,
                             ),
@@ -194,7 +194,7 @@ def layout_ondas(app, df, cidades, anos):
         html.Br(),
         dbc.Card([
             html.Div(
-                [html.I(className="fas fa-map me-2"), "Mapa de Temperatura Extrema"],
+                [html.I(className="fas fa-map me-2"), "Mapa de Temperatura Extrema 1981-2023"],
                 className="geo-map-section-header",
             ),
             dbc.CardBody([
@@ -242,7 +242,7 @@ def layout_ondas(app, df, cidades, anos):
         html.Br(),
 
         chart_card(
-            "Frequência de Ondas de Calor por Ano e Cidade",
+            "Frequência de Ondas de Calor por Ano e Cidade (1981-2023)",
             [
                 dbc.Row([
                     dbc.Col([
@@ -319,7 +319,7 @@ def layout_ondas(app, df, cidades, anos):
                     className="btn-download-asset",
                 ),
                 dcc.Store(id='current-year-map-index', data=0),
-                dcc.Store(id='year-map-list', data=[str(y) for y in range(2010, 2024)]),
+                dcc.Store(id='year-map-list', data=[str(y) for y in sorted(anos) if 2010 <= y <= 2023]),
             ]),
         ], className="mb-5 shadow-sm border-0"),
 
@@ -715,14 +715,14 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
             data_hm = data_processor.prepare_heatmap_events_data()
             is_dias = False
             is_ev = True
-            title = "Frequência de Eventos de Ondas de Calor por Ano e Cidade"
+            title = "Frequência de Eventos de Ondas de Calor por Ano e Cidade (1981-2023)"
             cb_title = "Nº de Eventos"
             cscale = "Oranges"
         else:
             data_hm = data_processor.prepare_heatmap_data()
             is_dias = True
             is_ev = False
-            title = "Frequência de Dias de Ondas de Calor por Ano e Cidade"
+            title = "Frequência de Dias de Ondas de Calor por Ano e Cidade (1981-2023)"
             cb_title = "Nº de Dias"
             cscale = "Reds"
 

@@ -4,11 +4,14 @@ Internações hospitalares (SIH) e óbitos (SIM) por doenças cardiovasculares e
 nas Regiões Metropolitanas brasileiras.
 """
 import logging
+import math
 
+import jenkspy
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from dash import Input, Output, State, dcc, html
 import dash_bootstrap_components as dbc
 
@@ -199,7 +202,24 @@ def _tab_infograficos() -> dbc.Container:
                 className="align-items-stretch",
             ),
 
-            # Linha 2: mapa de calor temporal (ano × mês)
+            # Linha 2a: série temporal facetada por ano
+            dbc.Row(dbc.Col(
+                chart_card(
+                    "Série temporal mensal por ano",
+                    [dcc.Loading(
+                        dcc.Graph(id="sihsim-g4b"),
+                        type="circle",
+                    ),
+                     _nota("Número absoluto de casos por mês — cada painel corresponde a um ano. "
+                           "Linhas tracejadas: limiares de risco calculados por quintis do volume mensal "
+                           "(sem risco → segurança → baixo → moderado → alto)."),
+                     dl_btn("sihsim-g4b", "serie_temporal_mensal_ano")],
+                    fa_icon="fas fa-chart-line",
+                ),
+                width=12, className="mb-3",
+            )),
+
+            # Linha 2b: mapa de calor temporal (ano × mês)
             dbc.Row(dbc.Col(
                 chart_card(
                     "Sazonalidade mensal — mapa de calor (ano × mês)",
@@ -217,6 +237,23 @@ def _tab_infograficos() -> dbc.Container:
                 width=12, className="mb-3",
             )),
 
+            # Linha 2c: taxa mensal por ano (facetada)
+            dbc.Row(dbc.Col(
+                chart_card(
+                    "Taxa mensal por ano (por 10.000 hab.)",
+                    [dcc.Loading(
+                        dcc.Graph(id="sihsim-g4c"),
+                        type="circle",
+                    ),
+                     _nota("Taxa mensal por 10.000 habitantes — barras cinzas, cada painel "
+                           "corresponde a um ano (3 colunas por linha). "
+                           "Eixo X: mês; eixo Y: taxa por 10.000 hab."),
+                     dl_btn("sihsim-g4c", "taxa_mensal_ano")],
+                    fa_icon="fas fa-chart-line",
+                ),
+                width=12, className="mb-3",
+            )),
+
             # Linha 3: taxa anual | contagem por sexo
             dbc.Row(
                 [
@@ -229,12 +266,11 @@ def _tab_infograficos() -> dbc.Container:
                                         dl_btn("sihsim-g5", "taxa_anual")],
                                        fa_icon="fas fa-chart-bar"),
                             xs=12, md=6, className="mb-3"),
-                    dbc.Col(chart_card("Internações/óbitos por sexo",
+                    dbc.Col(chart_card("Pirâmide etária por sexo",
                                        [dcc.Loading(dcc.Graph(id="sihsim-g6"), type="circle"),
-                                        _nota("Contagem absoluta por sexo ao longo dos anos. "
-                                              "Evidencia diferenças no padrão de adoecimento e "
-                                              "mortalidade entre homens e mulheres."),
-                                        dl_btn("sihsim-g6", "internacoes_por_sexo")],
+                                        _nota("Proporção de casos por faixa etária e sexo em relação "
+                                              "ao total geral. Masculino à esquerda, Feminino à direita."),
+                                        dl_btn("sihsim-g6", "piramide_etaria_sexo")],
                                        fa_icon="fas fa-venus-mars"),
                             xs=12, md=6, className="mb-3"),
                 ],
@@ -422,7 +458,9 @@ def register_callbacks_sih_sim(app) -> None:
         Output("sihsim-g1",       "figure"),
         Output("sihsim-g2",       "figure"),
         Output("sihsim-g3",       "figure"),
+        Output("sihsim-g4b",      "figure"),
         Output("sihsim-g4",       "figure"),
+        Output("sihsim-g4c",      "figure"),
         Output("sihsim-g5",       "figure"),
         Output("sihsim-g6",       "figure"),
         Output("sihsim-g7",       "figure"),
@@ -431,7 +469,7 @@ def register_callbacks_sih_sim(app) -> None:
         Input("sihsim-rm",      "value"),
     )
     def _update_graficos(sistema, causa, rm):
-        _vazio9 = ["—", "—", _empty(), _empty(), _empty(), _empty(), _empty(), _empty(), _empty()]
+        _vazio9 = ["—", "—", _empty(), _empty(), _empty(), _empty(), _empty(), _empty(), _empty(), _empty(), _empty()]
         _t_default = (
             [html.I(className="fas fa-hospital me-2"),   "—"],
             [html.I(className="fas fa-procedures me-2"), "—"],
@@ -442,6 +480,24 @@ def register_callbacks_sih_sim(app) -> None:
         ano_col      = ds._ANO_COL[sistema]
         mes_col      = ds._MES_COL[sistema]
         label_evento = "Internações" if sistema == "SIH" else "Óbitos"
+
+        # Paleta por sistema (SIH=azul+verde, SIM=azul+vermelho claro)
+        if sistema == "SIH":
+            _pal_pie   = [PRIMARY, GREEN, TEAL, "#4a9bc5", "#b0d9cc", "#a8d8ea", "#aaa"]
+            _pal_bar2  = GREEN
+            _pal_raca  = GREEN
+            _pal_taxa  = PRIMARY
+            _pal_hmap  = [[0, "#eaf6fb"], [0.4, GREEN], [1, PRIMARY]]
+            _pal_sexo  = {"Masculino": PRIMARY, "Feminino": GREEN}
+            _pal_faixa = GREEN
+        else:
+            _pal_pie   = [PRIMARY, TEAL, "#e07070", "#c0392b", "#b89dc0", "#888", "#aaa"]
+            _pal_bar2  = "#e07070"
+            _pal_raca  = "#e07070"
+            _pal_taxa  = "#c0392b"
+            _pal_hmap  = [[0, "#fde8e8"], [0.5, "#e07070"], [1, "#c0392b"]]
+            _pal_sexo  = {"Masculino": PRIMARY, "Feminino": "#e07070"}
+            _pal_faixa = "#e07070"
 
         # ── G1 / G2 — específico por sistema ─────────────────────────────
         if sistema == "SIH":
@@ -469,7 +525,7 @@ def register_callbacks_sih_sim(app) -> None:
             g1 = _empty(f"Sem dados de {t1.lower()}")
         else:
             g1 = px.pie(df_g1, names=col1, values="pct", hole=0.4,
-                        color_discrete_sequence=[PRIMARY, TEAL, GREEN, ORANGE, RED, DARK_RED, "#aaa"])
+                        color_discrete_sequence=_pal_pie)
             g1.update_traces(
                 textinfo="percent+label",
                 insidetextorientation="radial",
@@ -496,7 +552,7 @@ def register_callbacks_sih_sim(app) -> None:
         else:
             g2 = px.bar(df_g2, x="pct", y=col2, orientation="h",
                         labels={"pct": "Percentual (%)", col2: ""})
-            g2.update_traces(marker_color=TEAL)
+            g2.update_traces(marker_color=_pal_bar2)
             _base(g2)
             g2.update_layout(margin=dict(l=160, r=20, t=40, b=40))
 
@@ -508,9 +564,110 @@ def register_callbacks_sih_sim(app) -> None:
             df3 = df3.assign(lbl=(df3["pct"].round(1).astype(str) + "%"))
             g3 = px.bar(df3, x="pct", y="RACA_COR", orientation="h",
                         labels={"pct": "Percentual (%)", "RACA_COR": ""}, text="lbl")
-            g3.update_traces(textposition="outside", marker_color=GREEN)
+            g3.update_traces(textposition="outside", marker_color=_pal_raca)
             _base(g3)
             g3.update_layout(margin=dict(l=100, r=50, t=40, b=40))
+
+        # ── G4b — série temporal facetada por ano (grafico4 do script R) ──
+        # Método: geom_line(color="black") + facet_grid(~ ano_epi, scales="free_y")
+        # + geom_hline com limiares por quebras naturais (quintis do N mensal)
+        _LIMIAR_NOMES  = ["Sem risco", "Segurança", "Baixo",   "Moderado", "Alto"]
+        _LIMIAR_CORES  = ["#000099",   "#009900",   "#FFD166", "#ff8000",  "#cc0000"]
+        df4b = ds.serie_mensal(sistema, causa, rm)
+        if df4b.empty:
+            g4b = _empty("Sem série temporal disponível", height=300)
+        else:
+            _d4b = df4b.copy()
+            _d4b["MES_NUM"] = pd.to_numeric(_d4b[mes_col], errors="coerce")
+            _d4b["ANO_NUM"] = pd.to_numeric(_d4b[ano_col], errors="coerce")
+            _d4b = _d4b.dropna(subset=["MES_NUM", "ANO_NUM"])
+            monthly4b = _d4b.groupby(["ANO_NUM", "MES_NUM"])["N"].sum().reset_index()
+
+            # Limiares — quebras naturais de Fisher (classIntervals style="fisher" do R)
+            # R: epi <- classIntervals(casos_totais, n=5, style="fisher")$brks  → 6 valores
+            # R: df_limi armazena epi[1:5] (1-indexed) = _breaks[:5] (0-indexed)
+            _vals = monthly4b["N"].dropna().values
+            _uniq = np.unique(_vals)
+            if len(_uniq) >= 5:
+                # Quebras naturais de Fisher/Jenks sobre todos os valores mensais
+                _breaks = np.array(jenkspy.jenks_breaks(_vals.tolist(), n_classes=5))
+            elif len(_uniq) > 1:
+                # Fallback do R: quantile(unique(casos_totais), probs=seq(0,1,length.out=6))
+                _breaks = np.quantile(_uniq, np.linspace(0, 1, 6))
+            else:
+                _breaks = np.repeat(float(_uniq[0]) if len(_uniq) else 0.0, 6)
+            # R armazena epi[1], epi[2], epi[3], epi[4], epi[5] (1-indexed) = primeiros 5 dos 6 breaks
+            _limiar_vals = _breaks[:5]
+
+            anos4b  = sorted(monthly4b["ANO_NUM"].unique())
+            n4b     = len(anos4b)
+            ncols4b = min(7, n4b)
+            nrows4b = math.ceil(n4b / ncols4b) if n4b else 1
+
+            g4b = make_subplots(
+                rows=nrows4b, cols=ncols4b,
+                subplot_titles=[str(int(a)) for a in anos4b],
+                horizontal_spacing=0.04,
+                vertical_spacing=0.14,
+                shared_yaxes=False,
+            )
+
+            _legend_added = set()
+            for _i, _ano in enumerate(anos4b):
+                _r = _i // ncols4b + 1
+                _c = _i % ncols4b + 1
+                _da = monthly4b[monthly4b["ANO_NUM"] == _ano].sort_values("MES_NUM")
+
+                # Linha preta principal (geom_line color="black")
+                g4b.add_trace(go.Scatter(
+                    x=_da["MES_NUM"], y=_da["N"],
+                    mode="lines",
+                    line=dict(color="black", width=1.5),
+                    showlegend=False,
+                    hovertemplate="%{y}<extra></extra>",
+                ), row=_r, col=_c)
+
+                # Limiares tracejados coloridos (geom_hline por categoria)
+                for _ln, _lc, _lv in zip(_LIMIAR_NOMES, _LIMIAR_CORES, _limiar_vals):
+                    _show = _ln not in _legend_added
+                    g4b.add_trace(go.Scatter(
+                        x=[1, 12], y=[_lv, _lv],
+                        mode="lines",
+                        line=dict(color=_lc, width=0.9, dash="dash"),
+                        name=_ln,
+                        showlegend=_show,
+                        legendgroup=_ln,
+                        hoverinfo="skip",
+                    ), row=_r, col=_c)
+                    _legend_added.add(_ln)
+
+                g4b.update_xaxes(
+                    tickvals=list(range(1, 13)),
+                    ticktext=["J","F","M","A","M","J","J","A","S","O","N","D"],
+                    tickfont=dict(size=7),
+                    showgrid=True, gridcolor="rgba(0,0,0,0.08)", zeroline=False,
+                    row=_r, col=_c,
+                )
+                g4b.update_yaxes(
+                    tickfont=dict(size=7),
+                    showgrid=True, gridcolor="rgba(0,0,0,0.08)", zeroline=False,
+                    row=_r, col=_c,
+                )
+
+            _h4b = max(400, nrows4b * 200)
+            g4b.update_layout(
+                height=_h4b,
+                margin=dict(l=40, r=20, t=50, b=90),
+                plot_bgcolor=WHITE, paper_bgcolor=WHITE,
+                font=dict(color=PRIMARY),
+                legend=dict(
+                    orientation="h", yanchor="top", y=-0.06,
+                    xanchor="center", x=0.5, font=dict(size=9),
+                    title=dict(text="Limiares de risco:", font=dict(size=9)),
+                ),
+            )
+            for _ann in g4b.layout.annotations:
+                _ann.font = dict(size=9, color=PRIMARY)
 
         # ── G4 — mapa de calor ano × mês ─────────────────────────────────
         df4 = ds.serie_mensal(sistema, causa, rm)
@@ -536,7 +693,7 @@ def register_callbacks_sih_sim(app) -> None:
                 pivot.values,
                 x=meses_labels,
                 y=anos_labels,
-                color_continuous_scale=[[0, "#eaf6fb"], [0.5, TEAL], [1, PRIMARY]],
+                color_continuous_scale=_pal_hmap,
                 aspect="auto",
                 labels={"color": f"Nº de {label_evento.lower()}"},
             )
@@ -548,6 +705,71 @@ def register_callbacks_sih_sim(app) -> None:
                 },
             )
 
+        # ── G4c — taxa mensal por 10.000 hab. facetada por ano (grafico6 do R) ──
+        # geom_bar(fill="grey") + facet_wrap(~ ANO_OBITO, ncol=3) + taxa = N/pop*10000
+        df4c = ds.serie_mensal_taxa(sistema, causa, rm)
+        if df4c.empty or df4c["taxa"].isna().all():
+            g4c = _empty("Taxa mensal indisponível — verifique populacao_RM.parquet", height=300)
+        else:
+            _d4c = df4c.dropna(subset=["taxa"]).copy()
+            _d4c["MES_NUM"] = pd.to_numeric(_d4c[mes_col], errors="coerce")
+            _d4c["ANO_NUM"] = pd.to_numeric(_d4c[ano_col], errors="coerce")
+            _d4c = _d4c.dropna(subset=["MES_NUM", "ANO_NUM"])
+            monthly4c = _d4c.groupby(["ANO_NUM", "MES_NUM"])["taxa"].sum().reset_index()
+
+            anos4c  = sorted(monthly4c["ANO_NUM"].unique())
+            n4c     = len(anos4c)
+            ncols4c = min(3, n4c)          # facet_wrap(ncol=3) do R
+            nrows4c = math.ceil(n4c / ncols4c) if n4c else 1
+
+            g4c = make_subplots(
+                rows=nrows4c, cols=ncols4c,
+                subplot_titles=[str(int(a)) for a in anos4c],
+                horizontal_spacing=0.06,
+                vertical_spacing=0.10,
+                shared_yaxes=False,
+            )
+
+            for _i, _ano in enumerate(anos4c):
+                _r = _i // ncols4c + 1
+                _c = _i % ncols4c + 1
+                _da = monthly4c[monthly4c["ANO_NUM"] == _ano].sort_values("MES_NUM")
+
+                g4c.add_trace(go.Bar(
+                    x=_da["MES_NUM"],
+                    y=_da["taxa"],
+                    marker_color=_pal_taxa,
+                    showlegend=False,
+                    hovertemplate="Mês %{x}: %{y:.1f}<extra></extra>",
+                ), row=_r, col=_c)
+
+                g4c.update_xaxes(
+                    tickvals=list(range(1, 13)),
+                    ticktext=["Jan","Fev","Mar","Abr","Mai","Jun",
+                              "Jul","Ago","Set","Out","Nov","Dez"],
+                    tickangle=45,
+                    tickfont=dict(size=7),
+                    showgrid=False, zeroline=False,
+                    row=_r, col=_c,
+                )
+                g4c.update_yaxes(
+                    tickfont=dict(size=7),
+                    showgrid=True, gridcolor="rgba(0,0,0,0.08)", zeroline=False,
+                    row=_r, col=_c,
+                )
+
+            _h4c = max(400, nrows4c * 200)
+            g4c.update_layout(
+                height=_h4c,
+                margin=dict(l=50, r=20, t=50, b=60),
+                plot_bgcolor=WHITE, paper_bgcolor=WHITE,
+                font=dict(color=PRIMARY),
+                showlegend=False,
+                bargap=0.15,
+            )
+            for _ann in g4c.layout.annotations:
+                _ann.font = dict(size=10, color=PRIMARY)
+
         # ── G5 — taxa anual ───────────────────────────────────────────────
         df5 = ds.taxa_anual(sistema, causa, rm)
         if df5.empty or df5["taxa"].isna().all():
@@ -556,20 +778,89 @@ def register_callbacks_sih_sim(app) -> None:
             df5p = df5.dropna(subset=["taxa"])
             g5 = px.bar(df5p, x=ano_col, y="taxa",
                         labels={ano_col: "Ano", "taxa": "Taxa / 1.000 hab."})
-            g5.update_traces(marker_color=PRIMARY)
+            g5.update_traces(marker_color=_pal_taxa)
             _base(g5)
             g5.update_layout(showlegend=False, xaxis=dict(tickmode="linear", dtick=2))
 
-        # ── G6 — contagem por sexo e ano ──────────────────────────────────
-        df6 = ds.sexo_por_ano(sistema, causa, rm)
+        # ── G6 — pirâmide etária por sexo (grafico10 do R) ───────────────
+        _FAIXA_ORDER = ["<1", "1-5", "6-10", "11-19", "20-29", "30-39",
+                        "40-49", "50-59", "60-69", "70-79", ">80"]
+        _smap = {
+            "1": "Masculino", "M": "Masculino", "Masculino": "Masculino",
+            "2": "Feminino",  "F": "Feminino",  "Feminino": "Feminino",
+        }
+        df6 = ds.sexo_por_faixa(sistema, causa, rm)
         if df6.empty:
-            g6 = _empty("Sem dados por sexo")
+            g6 = _empty("Sem dados disponíveis — execute prepare_sih_sim_data.py para gerar o parquet de pirâmide.")
         else:
-            g6 = px.line(df6, x=ano_col, y="N", color="SEXO", markers=True,
-                         labels={ano_col: "Ano", "N": f"Nº de {label_evento.lower()}", "SEXO": "Sexo"},
-                         color_discrete_map={"Masculino": PRIMARY, "Feminino": RED})
-            _base(g6)
-            g6.update_layout(xaxis=dict(tickmode="linear", dtick=2))
+            df6 = df6.copy()
+            df6["SEXO"] = df6["SEXO"].astype(str).map(_smap)
+            df6 = df6[df6["SEXO"].isin(["Masculino", "Feminino"]) &
+                      df6["FAIXA_ETARIA"].isin(_FAIXA_ORDER)]
+            if df6.empty:
+                g6 = _empty("Sem dados por sexo/faixa etária")
+            else:
+                total_geral = df6["N"].sum()
+                pct_factor  = 100.0 / total_geral if total_geral > 0 else 0.0
+                # groupby garante índice único mesmo se o parquet vier com duplicatas
+                masc = (df6[df6["SEXO"] == "Masculino"]
+                        .groupby("FAIXA_ETARIA")["N"].sum() * pct_factor)
+                fem  = (df6[df6["SEXO"] == "Feminino"]
+                        .groupby("FAIXA_ETARIA")["N"].sum() * pct_factor)
+
+                m_vals = [float(masc.get(f, 0)) for f in _FAIXA_ORDER]
+                f_vals = [float(fem.get(f, 0))  for f in _FAIXA_ORDER]
+                _max_v = max(max(m_vals + f_vals), 15)
+                _lim   = _max_v * 1.3
+                _step  = 5 if _max_v < 15 else 10
+                _ticks = list(range(0, int(_lim) + _step, _step))
+                _tick_vals = [-v for v in _ticks] + _ticks[1:]
+                _tick_text = [f"{v}%" for v in _ticks] + [f"{v}%" for v in _ticks[1:]]
+
+                g6 = go.Figure()
+                g6.add_trace(go.Bar(
+                    y=_FAIXA_ORDER,
+                    x=[-v for v in m_vals],
+                    name="Masculino",
+                    orientation="h",
+                    marker_color=_pal_sexo["Masculino"],
+                    text=[f"{v:.1f}%" for v in m_vals],
+                    textposition="outside",
+                    hovertemplate="<b>Masculino</b><br>Faixa: %{y}<br>Proporção: %{customdata:.1f}%<extra></extra>",
+                    customdata=m_vals,
+                ))
+                g6.add_trace(go.Bar(
+                    y=_FAIXA_ORDER,
+                    x=f_vals,
+                    name="Feminino",
+                    orientation="h",
+                    marker_color=_pal_sexo["Feminino"],
+                    text=[f"{v:.1f}%" for v in f_vals],
+                    textposition="outside",
+                    hovertemplate="<b>Feminino</b><br>Faixa: %{y}<br>Proporção: %{customdata:.1f}%<extra></extra>",
+                    customdata=f_vals,
+                ))
+                g6.update_layout(
+                    **{**LAYOUT_BASE,
+                       "height": 390,
+                       "barmode": "overlay",
+                       "xaxis": dict(
+                           tickvals=_tick_vals,
+                           ticktext=_tick_text,
+                           title="Proporção (% do total)",
+                           zeroline=True, zerolinecolor="#555", zerolinewidth=1.5,
+                           range=[-_lim, _lim],
+                       ),
+                       "yaxis": dict(
+                           title="Faixa etária",
+                           categoryorder="array",
+                           categoryarray=_FAIXA_ORDER,
+                       ),
+                       "legend": dict(orientation="h", yanchor="bottom", y=1.02,
+                                      xanchor="center", x=0.5),
+                       "margin": dict(l=55, r=65, t=40, b=50),
+                    }
+                )
 
         # ── G7 — faixa etária ─────────────────────────────────────────────
         df7 = ds.faixa_etaria(sistema, causa, rm)
@@ -579,15 +870,18 @@ def register_callbacks_sih_sim(app) -> None:
             df7 = df7.assign(lbl=(df7["pct"].round(1).astype(str) + "%"))
             g7 = px.bar(df7, x="pct", y="FAIXA_ETARIA", orientation="h",
                         labels={"pct": "Percentual (%)", "FAIXA_ETARIA": "Faixa etária"}, text="lbl")
-            g7.update_traces(textposition="outside", marker_color=ORANGE)
+            g7.update_traces(textposition="outside", marker_color=_pal_faixa)
             _base(g7, height=320)
             g7.update_layout(margin=dict(l=80, r=60, t=40, b=40))
 
-        return title1, title2, note1, note2, g1, g2, g3, g4, g5, g6, g7
+        return title1, title2, note1, note2, g1, g2, g3, g4b, g4, g4c, g5, g6, g7
 
     def _build_choropleth_svg(taxa_df, geojson, all_codes,
                               range_min=None, range_max=None, height=580,
-                              var_label="Taxa por 1.000 hab.") -> go.Figure:
+                              var_label="Taxa por 1.000 hab.",
+                              colorscale=None) -> go.Figure:
+        if colorscale is None:
+            colorscale = [[0, "#eaf6fb"], [0.5, TEAL], [1, PRIMARY]]
         """
         Mapa coroplético SVG (go.Choropleth) com duas camadas:
           1) fundo cinza — todos os municípios da RM, incluindo sem dados
@@ -665,7 +959,7 @@ def register_callbacks_sih_sim(app) -> None:
             z=plot_df["taxa"],
             zmin=zmin,
             zmax=zmax,
-            colorscale=[[0, "#eaf6fb"], [0.5, TEAL], [1, PRIMARY]],
+            colorscale=colorscale,
             showscale=True,
             marker_line_color="white",
             marker_line_width=0.5,
@@ -705,6 +999,11 @@ def register_callbacks_sih_sim(app) -> None:
 
         label_evento = "internações" if sistema == "SIH" else "óbitos"
         label_causa  = "cardiovasculares" if causa == "CARDIOVASCULAR" else "respiratórias"
+        _mapa_cscale = (
+            [[0, "#eaf6fb"], [0.4, GREEN], [1, PRIMARY]]
+            if sistema == "SIH"
+            else [[0, "#fde8e8"], [0.5, "#e07070"], [1, "#c0392b"]]
+        )
 
         _cfg = {"displayModeBar": True, "displaylogo": False}
 
@@ -738,7 +1037,7 @@ def register_callbacks_sih_sim(app) -> None:
                 fig = _build_choropleth_svg(
                     t_df, geojson, all_codes,
                     range_min=range_min, range_max=range_max, height=420,
-                    var_label=_vlabel,
+                    var_label=_vlabel, colorscale=_mapa_cscale,
                 )
                 cards.append(
                     dbc.Col([
@@ -785,7 +1084,7 @@ def register_callbacks_sih_sim(app) -> None:
         all_codes = data.get("all_codes", [])
         _vlabel   = f"Taxa de {label_evento} {label_causa}/1.000 hab."
         fig = _build_choropleth_svg(taxa_df, data["geojson"], all_codes, height=580,
-                                    var_label=_vlabel)
+                                    var_label=_vlabel, colorscale=_mapa_cscale)
         return (
             [dcc.Graph(figure=fig,
                        config={**_cfg, "toImageButtonOptions": {"filename": f"mapa_{rm}_{ano}"}})],

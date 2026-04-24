@@ -1,14 +1,85 @@
 """
 Temperaturas diárias — ex-dashboard-temperaturas.
 """
+import json
+import os
+
+import folium
 from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
-import dash_leaflet as dl
 import pandas as pd
 import plotly.graph_objs as go
 
 from config import YEAR_MIN, YEAR_MAX
+from config_paths import PROCESSED_DIR
 from components import chart_card, info_card, dd, dl_btn
+
+_mapa_estacoes_html: str | None = None
+_GEOJSON_PATH = os.path.join(PROCESSED_DIR, "sih_sim", "geojson_rm.json")
+
+
+def _popup_estacao(cidade, lat, lon, n_reg, y_min, y_max):
+    return f"""
+    <div style="font-family:Arial,sans-serif;min-width:220px;">
+      <div style="background:linear-gradient(90deg,#1761a0,#2b9eb3);color:#fff;
+                  font-weight:700;padding:8px 12px;border-radius:6px 6px 0 0;font-size:13px;">
+        {cidade}
+      </div>
+      <div style="padding:8px 12px;font-size:12px;line-height:1.7;">
+        <b>Coordenadas:</b> {lat:.4f}°, {lon:.4f}°<br>
+        <b>Registros:</b> {n_reg:,} observações diárias<br>
+        <b>Período:</b> {y_min} – {y_max}
+      </div>
+    </div>"""
+
+
+def build_mapa_estacoes(df: pd.DataFrame) -> str:
+    global _mapa_estacoes_html
+    if _mapa_estacoes_html is not None:
+        return _mapa_estacoes_html
+
+    m = folium.Map(location=[-15.78, -47.93], zoom_start=4)
+
+    # Limites das RMBs
+    if os.path.exists(_GEOJSON_PATH):
+        with open(_GEOJSON_PATH, encoding="utf-8") as f:
+            geojson_data = json.load(f)
+        folium.GeoJson(
+            geojson_data,
+            name="RMBs",
+            style_function=lambda _: {
+                "fillColor": "#ffb347",
+                "color": "#333333",
+                "weight": 1.0,
+                "fillOpacity": 0.18,
+            },
+            tooltip=folium.GeoJsonTooltip(
+                fields=["NM_MUN"],
+                aliases=["Município:"],
+                sticky=False,
+            ),
+        ).add_to(m)
+
+    # Marcadores das estações
+    if not df.empty and "Lat" in df.columns:
+        meta = df.drop_duplicates("cidade").dropna(subset=["Lat", "Long"])
+        stats = df.groupby("cidade")["year"].agg(y_min="min", y_max="max", n_reg="count").to_dict("index")
+        for _, row in meta.iterrows():
+            cidade = str(row["cidade"])
+            lat, lon = float(row["Lat"]), float(row["Long"])
+            s = stats.get(cidade, {})
+            folium.Marker(
+                location=[lat, lon],
+                tooltip=cidade,
+                popup=folium.Popup(_popup_estacao(cidade, lat, lon,
+                                                  int(s.get("n_reg", 0)),
+                                                  int(s.get("y_min", YEAR_MIN)),
+                                                  int(s.get("y_max", YEAR_MAX))),
+                                   max_width=300),
+            ).add_to(m)
+
+    _mapa_estacoes_html = m._repr_html_()
+    return _mapa_estacoes_html
 
 
 def chart_note(texto: str) -> html.P:
@@ -52,112 +123,41 @@ def _marks_periodo():
     return m
 
 
-_estacoes_cache: list | None = None
-
-
-def _estacoes_map_children(df: pd.DataFrame):
-    """Marcadores com tooltip + popup com detalhes ao clicar."""
-    global _estacoes_cache
-    if _estacoes_cache is not None:
-        return _estacoes_cache
-    if df.empty or "Lat" not in df.columns or "Long" not in df.columns:
-        return []
-    meta = df.drop_duplicates(subset=["cidade"], keep="first").dropna(subset=["Lat", "Long"])
-    # Pré-computa estatísticas por cidade uma única vez (evita 15 filtros full-df)
-    city_stats = (
-        df.groupby("cidade")["year"]
-        .agg(y_min="min", y_max="max", n_reg="count")
-        .to_dict("index")
-    )
-    out = []
-    for _, row in meta.iterrows():
-        cidade = str(row["cidade"])
-        stats  = city_stats.get(cidade, {})
-        y_min  = int(stats.get("y_min", YEAR_MIN))
-        y_max  = int(stats.get("y_max", YEAR_MAX))
-        n_reg  = int(stats.get("n_reg", 0))
-        lat, lon = float(row["Lat"]), float(row["Long"])
-
-        extras = []
-        for col, label in [
-            ("UF", "UF"),
-            ("Estado", "Estado"),
-            ("RM", "Região metropolitana"),
-            ("Regiao", "Região"),
-        ]:
-            if col in row.index and pd.notna(row[col]) and str(row[col]).strip():
-                extras.append(
-                    html.P([html.Strong(f"{label}: "), str(row[col])], className="small mb-1")
-                )
-
-        popup_body = html.Div([
-            html.H6(cidade, className="text-primary mb-2 fw-bold"),
-            html.P([
-                html.I(className="fas fa-location-dot me-1 text-muted"),
-                html.Span(f"{lat:.4f}°, {lon:.4f}°", className="small"),
-            ], className="mb-2"),
-            html.P([html.Strong("Registros: "), f"{n_reg:,} observações diárias"], className="small mb-1"),
-            html.P([html.Strong("Anos nos dados: "), f"{y_min} – {y_max}"], className="small mb-2"),
-        ] + extras + [
-            html.Hr(className="my-2"),
-            html.P(
-                "Use o menu «Cidade» ao lado para carregar os gráficos desta estação.",
-                className="small text-muted mb-0",
-                style={"fontStyle": "italic"},
-            ),
-        ], style={"minWidth": "240px", "maxWidth": "320px"})
-
-        out.append(
-            dl.Marker(
-                position=[lat, lon],
-                children=[
-                    dl.Tooltip(cidade),
-                    dl.Popup(children=popup_body),
-                ],
-            )
-        )
-    _estacoes_cache = out
-    return out
 
 
 def layout_temperaturas(app, df, cidades, anos):
-    map_center = (
-        (float(df["Lat"].mean()), float(df["Long"].mean()))
-        if not df.empty and "Lat" in df.columns and "Long" in df.columns
-        else (-15.0, -50.0)
-    )
-    map_layers = [
-        dl.TileLayer(),
-        dl.LayerGroup(children=_estacoes_map_children(df)),
-    ]
-
+    build_mapa_estacoes(df)
     cidade_opts = [{"label": c, "value": c} for c in cidades]
+    cidade_default = "Brasília" if "Brasília" in cidades else (cidades[0] if cidades else None)
 
     return dbc.Container([
-        dbc.Row([
-            dbc.Col([
-                html.Img(src=app.get_asset_url("geocalor.png"), className="logo-img"),
-                html.H2("Caracterização Climática das RMB", className="text-center my-4"),
-                info_card(
-                    "",
-                    html.P(
-                        "Foi feita uma caracterização climática das regiões metropolitanas estudadas "
-                        "no Projeto GeoCalor a partir de duas variáveis principais, a temperatura e "
-                        "a umidade. Nós identificamos inicialmente o comportamento geral das temperaturas "
-                        "máximas, médias e mínimas, bem como da umidade relativa do ar média. Você pode ver "
-                        "isso abaixo e filtrar os dados por ano e por cidade.",
-                        className="mb-0 text-muted",
-                    ),
-                    fa_icon="fas fa-info-circle",
+
+        # ── Cabeçalho ────────────────────────────────────────────────────────
+        dbc.Row(dbc.Col([
+            html.Img(src=app.get_asset_url("geocalor.png"), className="logo-img"),
+            html.H2("Caracterização climática das RMB", className="text-center my-4"),
+            info_card(
+                "",
+                html.P(
+                    "Foi feita uma caracterização climática das regiões metropolitanas estudadas "
+                    "no Projeto GeoCalor a partir de duas variáveis principais, a temperatura e "
+                    "a umidade. Nós identificamos inicialmente o comportamento geral das temperaturas "
+                    "máximas, médias e mínimas, bem como da umidade relativa do ar média. "
+                    "Filtre os dados por cidade e período abaixo.",
+                    className="mb-0 text-muted",
                 ),
-            ], width=12),
-        ], align="center", className="text-center"),
+                fa_icon="fas fa-info-circle",
+            ),
+        ], width=12), className="text-center mb-3"),
 
-        html.Br(),
-
+        # ── Controles: cidade + slider na mesma linha ─────────────────────
         dbc.Row([
+            dbc.Col(
+                dd("cidade-temp", cidade_opts, cidade_default, label="Cidade"),
+                xs=12, md=3, className="mb-2",
+            ),
             dbc.Col([
-                html.Label("Selecione o período:", className="fw-semibold"),
+                html.Label("Período:", className="fw-semibold small mb-1"),
                 dcc.RangeSlider(
                     id="slider-anos",
                     min=YEAR_MIN, max=YEAR_MAX, step=1,
@@ -165,48 +165,50 @@ def layout_temperaturas(app, df, cidades, anos):
                     value=[YEAR_MIN, YEAR_MAX],
                     tooltip={"placement": "bottom", "always_visible": False},
                 ),
-            ], width=12),
-        ]),
+            ], xs=12, md=9, className="mb-2"),
+        ], className="align-items-end mb-3"),
 
-        html.Br(),
-
+        # ── Mapa | Temperaturas diárias (lado a lado) ────────────────────
         dbc.Row([
-            dbc.Col([
+            dbc.Col(
                 chart_card(
                     "Estações meteorológicas",
                     [
                         html.P(
-                            "Passe o mouse para o nome da cidade; clique no marcador para "
-                            "coordenadas, volume de dados e período disponível.",
+                            "Passe o mouse sobre o marcador para ver o nome da cidade; "
+                            "clique para exibir coordenadas, volume de dados e período.",
                             className="small text-muted mb-2",
                         ),
-                        dl.Map(
-                            map_layers,
-                            id="mapa-estacoes-temp",
-                            style={"width": "100%", "height": "clamp(240px, 50vw, 440px)", "borderRadius": "8px"},
-                            center=map_center,
-                            zoom=4,
+                        html.Iframe(
+                            src="/mapa-estacoes",
+                            style={"width": "100%", "height": "400px",
+                                   "border": "none", "borderRadius": "8px"},
                         ),
                     ],
                     fa_icon="fas fa-map-marked-alt",
                 ),
-            ], xs=12, lg=5),
-
-            dbc.Col([
-                dd("cidade-temp", cidade_opts, cidades[0] if cidades else None, label="Cidade"),
-                html.Br(),
+                xs=12, lg=5, className="mb-3",
+            ),
+            dbc.Col(
                 chart_card(
                     "Temperaturas diárias",
                     [
                         dcc.Loading(dcc.Graph(id="grafico-temp"), type="circle"),
                         chart_note(
-                            "Série temporal das temperaturas máxima (vermelho), média "
-                            "(laranja) e mínima (teal) diárias para a cidade e período selecionados."
+                            "Série temporal das temperaturas máxima (vermelho), média (laranja) "
+                            "e mínima (teal) diárias para a cidade e período selecionados."
                         ),
                         dl_btn("grafico-temp", "temperaturas_diarias"),
                     ],
                     fa_icon="fas fa-thermometer-half",
                 ),
+                xs=12, lg=7, className="mb-3",
+            ),
+        ], className="align-items-stretch mb-0"),
+
+        # ── Umidade | Amplitude (mesma altura, sem gap) ───────────────────
+        dbc.Row([
+            dbc.Col(
                 chart_card(
                     "Umidade média mensal",
                     [
@@ -219,60 +221,44 @@ def layout_temperaturas(app, df, cidades, anos):
                     ],
                     fa_icon="fas fa-tint",
                 ),
-            ], xs=12, lg=7),
-        ]),
-
-        dbc.Row([
-            dbc.Col(
-                info_card(
-                    "",
-                    html.P(
-                        "A partir dos dados base obtidos do INMET ou do ICEA, nós identificamos "
-                        "também as amplitudes térmicas e as anomalias de temperatura, pois são "
-                        "importantes indicadores climáticos para servirem de base das investigações "
-                        "futuras sobre ondas de calor.",
-                        className="mb-0 text-muted",
-                    ),
-                    fa_icon="fas fa-chart-area",
-                ),
-                width=12,
+                xs=12, lg=5, className="mb-3",
             ),
-        ]),
-
-        dbc.Row([
-            dbc.Col([
+            dbc.Col(
                 chart_card(
                     "Amplitude térmica diária",
                     [
                         dcc.Loading(dcc.Graph(id="grafico-amplitude"), type="circle"),
                         chart_note(
-                            "Amplitude térmica diária (tempMax − tempMin). A linha "
-                            "tracejada representa a média móvel de 30 dias."
+                            "Amplitude térmica diária (tempMax − tempMin). "
+                            "A linha tracejada representa a média móvel de 30 dias."
                         ),
                         dl_btn("grafico-amplitude", "amplitude_termica"),
                     ],
                     fa_icon="fas fa-arrows-alt-v",
                 ),
-            ], xs=12, md=6, className="mb-3"),
-            dbc.Col([
-                chart_card(
-                    "Anomalia de temperatura",
-                    [
-                        dcc.Loading(dcc.Graph(id="grafico-anomalia"), type="circle"),
-                        chart_note(
-                            "Anomalia da temperatura média mensal vs. climatologia histórica. "
-                            "Barras vermelhas: acima da média; barras teal: abaixo."
-                        ),
-                        dl_btn("grafico-anomalia", "anomalia_temperatura"),
-                    ],
-                    fa_icon="fas fa-chart-bar",
-                ),
-            ], xs=12, md=6, className="mb-3"),
+                xs=12, lg=7, className="mb-3",
+            ),
         ], className="align-items-stretch"),
 
-        dbc.Row([
-            dbc.Col(nota_tecnica_card(), width=12),
-        ]),
+        # ── Anomalia de temperatura (full width — precisa de largura) ─────
+        dbc.Row(dbc.Col(
+            chart_card(
+                "Anomalia de temperatura",
+                [
+                    dcc.Loading(dcc.Graph(id="grafico-anomalia"), type="circle"),
+                    chart_note(
+                        "Anomalia da temperatura média mensal vs. climatologia histórica do período. "
+                        "Barras vermelhas: acima da média; barras teal: abaixo da média."
+                    ),
+                    dl_btn("grafico-anomalia", "anomalia_temperatura"),
+                ],
+                fa_icon="fas fa-chart-bar",
+            ),
+            width=12,
+        ), className="mb-3"),
+
+        # ── Nota técnica ──────────────────────────────────────────────────
+        dbc.Row(dbc.Col(nota_tecnica_card(), width=12)),
 
     ], fluid=True, className="py-4")
 
@@ -284,7 +270,7 @@ def register_callbacks_temperaturas(app, df, visualizer):
          Output("grafico-amplitude", "figure"),
          Output("grafico-anomalia",  "figure")],
         [Input("cidade-temp",  "value"),
-         Input("slider-anos",  "value")]
+         Input("slider-anos",  "value")],
     )
     def update_graficos(cidade, anos_selecionados):
         empty = go.Figure()

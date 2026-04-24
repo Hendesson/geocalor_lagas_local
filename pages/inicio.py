@@ -29,6 +29,93 @@ APOIADORES = [
 ]
 
 
+_PUBLICACOES = [
+    {
+        "img": "Bezerra_artigo.png",
+        "href": "http://cienciaesaudecoletiva.com.br/artigos/ondas-de-calor-e-saude-humana-revisao-de-escopo-dos-codigos-cid10-para-mortalidade-e-morbidade/19937?id=19937",
+        "ref": (
+            "Bezerra, AB, Gurgel, H, Santana, EA, Silva, EL, Oliveira, LF, Lofrano-Porto, B, Miranda, MJ. "
+            "ONDAS DE CALOR E SAÚDE HUMANA: REVISÃO DE ESCOPO DOS CÓDIGOS CID-10 PARA MORTALIDADE E MORBIDADE. "
+            "Cien Saude Colet, 2026."
+        ),
+    },
+    {
+        "img": "bruno_artigo.png",
+        "href": "https://rbafs.org.br/RBAFS/article/view/15567",
+        "ref": (
+            "Porto, LGG; Porto, BL; Gurgel, H; Matsudo, VKR; Costa, L. As recomendações de atividade física "
+            "para a saúde no contexto das emergências climáticas: estamos suficientemente atentos? "
+            "Revista Brasileira de Atividade Física e Saúde, v. 31, p. 1-6, 2026."
+        ),
+    },
+    {
+        "img": "eliane_artigo_1.png",
+        "href": "https://www.sciencedirect.com/science/article/pii/S2667193X25002868?via%3Dihub",
+        "ref": (
+            "Hartinger, SM; Palmeiro-Silva, Y; Llerena-Cayo, C; Araujo Palharini, RS; et al. "
+            "The 2025 Lancet Countdown Latin America report: moving from promises to equitable climate "
+            "action for a prosperous future. Lancet Regional Health-Americas, v. 52, p. 101276, 2025."
+        ),
+    },
+    {
+        "img": "eliane_artigo_2.png",
+        "href": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0295766",
+        "ref": (
+            "Monteiro dos Santos, D; Libonati, R; Garcia, BN; Geirinhas, JL; Salvi, BB; Lima e Silva, E; "
+            "et al. Twenty-first-century demographic and social inequalities of heat-related deaths in "
+            "Brazilian urban areas. PLoS One, v. 19, p. e0295766, 2024."
+        ),
+    },
+]
+
+_ACEITOS = [
+    "Revista Estrabão, 2026: Bezerra, AB, Gurgel, H, Santana, EA, Silva, EL, Lofrano-Porto, B. "
+    "Ondas de calor e internações por doenças respiratórias na Região Integrada de Desenvolvimento "
+    "do Distrito Federal e Entorno.",
+]
+
+
+def _pub_card(app, pub):
+    ref_text = html.P(pub["ref"], className="small text-muted mb-2")
+    btn = html.A(
+        "Acessar",
+        href=pub["href"],
+        target="_blank",
+        className="btn btn-outline-primary btn-sm",
+    )
+    if pub["img"]:
+        img_el = html.A(
+            html.Img(
+                src=app.get_asset_url(pub["img"]),
+                style={"maxHeight": "160px", "maxWidth": "100%", "objectFit": "contain"},
+                className="img-fluid rounded shadow-sm mb-3",
+            ),
+            href=pub["href"],
+            target="_blank",
+        )
+        body = html.Div([img_el, ref_text, btn])
+    else:
+        body = html.Div([ref_text, btn])
+    return dbc.Col(
+        dbc.Card(dbc.CardBody(body), className="h-100 shadow-sm"),
+        xs=12, sm=6, lg=3, className="mb-4"
+    )
+
+
+def publicacoes_section(app):
+    cards = [_pub_card(app, p) for p in _PUBLICACOES]
+    aceitos = [
+        html.Li(txt, className="text-muted small") for txt in _ACEITOS
+    ]
+    return html.Div([
+        dbc.Row(cards, className="justify-content-center"),
+        html.Div([
+            html.P("Aceito para publicação", className="fw-semibold mb-2 mt-2"),
+            html.Ul(aceitos, className="mb-0"),
+        ]) if aceitos else None,
+    ])
+
+
 def apoiadores_row(app):
     def col(img, href, label):
         return dbc.Col(
@@ -83,23 +170,31 @@ def layout_inicio(app):
                                 target="_blank"
                             )
                         ], className="d-flex justify-content-center align-items-center mb-4 gap-4"),
-                        html.P([
-                            "O projeto Geocalor tem como principal objetivo pesquisar os impactos das "
-                            "ondas de calor na saúde para ter subsídios científicos para criação de um "
-                            "sistema de alerta e apoiar a gestão do SUS na definição de melhores "
-                            "estratégias para direcionar a população nesses períodos de elevadas "
-                            "temperaturas em decorrência dos extremos de calor.",
-                            html.Br(), html.Br(),
-                            "Atualmente, as mudanças ambientais globais que presenciamos no mundo todo "
-                            "têm feito com que as ondas de calor sejam cada vez mais intensas e "
-                            "frequentes, trazendo mais riscos à saúde humana.",
-                            html.Br(), html.Br(),
-                            "Este dashboard foi desenvolvido para analisar e visualizar dados "
-                            "climáticos, com foco em ondas de calor e anomalias de temperatura. "
-                            "Utilizamos dados de estações meteorológicas para identificar padrões "
-                            "climáticos e eventos extremos, contribuindo para a conscientização e "
-                            "planejamento frente às mudanças climáticas."
-                        ], className="text-center mb-4 text-muted"),
+                        html.P(
+                            "O aumento da frequência e intensidade das ondas de calor, impulsionado "
+                            "pelas mudanças climáticas, tem ampliado os riscos à saúde da população, "
+                            "especialmente entre grupos mais vulneráveis.",
+                            className="text-center mb-3 text-muted"
+                        ),
+                        html.P(
+                            "O projeto GeoCalor, intitulado Indicadores Espaciais e Sistema de Alerta "
+                            "para Ondas de Calor para a Saúde Pública nas Regiões Metropolitanas "
+                            "Brasileiras, investiga os impactos das ondas de calor a partir da "
+                            "integração de dados climáticos e de saúde, com foco nas três regiões "
+                            "metropolitanas mais populosas de cada região do Brasil.",
+                            className="text-center mb-3 text-muted"
+                        ),
+                        html.P(
+                            "Este dashboard reúne dados de caracterização climática, ondas de calor, "
+                            "perfil epidemiológico e sistemas de alerta, permitindo visualizar padrões, "
+                            "identificar anomalias e apoiar o monitoramento, a comunicação de risco e "
+                            "o planejamento de ações em saúde, com o objetivo de gerar evidências "
+                            "científicas e subsidiar a atuação do Sistema Único de Saúde - SUS.",
+                            className="text-center mb-4 text-muted"
+                        ),
+                        html.Hr(className="my-4"),
+                        html.P("Publicações", className="section-heading text-center mb-4"),
+                        publicacoes_section(app),
                         html.Hr(className="my-4"),
                         html.P("Apoiadores e Financiadores", className="section-heading text-center mb-4"),
                         apoiadores_row(app),

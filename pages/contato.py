@@ -22,8 +22,7 @@ TEAM_MEMBERS = [
         "institution": "UnB / GEA",
         "areas": "Geotecnologia, Saúde e Meio Ambiente, Geocartografia",
         "image": "helen.jpg",
-        "lattes": "http://lattes.cnpq.br/0975018553829295",
-        "researchgate": "https://www.researchgate.net/profile/Helen_Gurgel"
+        "lattes": "http://lattes.cnpq.br/0975018553829295"
     },
     {
         "name": "Eliane Lima e Silva",
@@ -31,8 +30,7 @@ TEAM_MEMBERS = [
         "institution": "Consultora em Saúde Pública",
         "areas": "Saúde Coletiva, Saúde Pública, Saúde Ambiental, Ciências Ambientais",
         "image": "eliane.png",
-        "lattes": "http://lattes.cnpq.br/2241554336609585",
-        "researchgate": "https://www.researchgate.net/profile/Eliane_Lima_E_Silva"
+        "lattes": "http://lattes.cnpq.br/2241554336609585"
     },
     {
         "name": "Eucilene Alves Santanna Porto",
@@ -40,8 +38,7 @@ TEAM_MEMBERS = [
         "institution": "Consultora em Saúde Pública",
         "areas": "Ambiente e Saúde",
         "image": "eucilene.jpg",
-        "lattes": "http://lattes.cnpq.br/5603383846224202",
-        "researchgate": "https://www.researchgate.net/profile/Eucilene_Alves_Santana"
+        "lattes": "http://lattes.cnpq.br/5603383846224202"
     },
     {
         "name": "Amarílis Bahia Bezerra",
@@ -69,7 +66,7 @@ TEAM_MEMBERS = [
     },
     {
         "name": "Adriana Dennise Rodriguez Blanco",
-        "role": "DOUTORANDOS",
+        "role": "PESQUISADORES COLABORADORES",
         "institution": "UnB / GEA",
         "areas": "Geografia da Saúde, Turismo e Saúde",
         "image": "Adriana-Rodriguez-Blanco.png",
@@ -93,7 +90,7 @@ TEAM_MEMBERS = [
     },
     {
         "name": "Hendesson Alves Pereira",
-        "role": "GRADUANDOS",
+        "role": "MESTRANDOS",
         "institution": "UnB / GEA",
         "areas": "Geoprocessamento, Geografia da Saúde",
         "image": "hend.jpeg",
@@ -109,7 +106,7 @@ TEAM_MEMBERS = [
     },
     {
         "name": "Lívia Feitosa de Oliveira",
-        "role": "GRADUANDOS",
+        "role": "MESTRANDOS",
         "institution": "UnB / GEA",
         "areas": "Geoprocessamento, Geografia da Saúde",
         "image": "livia.jpeg",
@@ -128,19 +125,9 @@ def make_member_card(app, member: dict, card_class: str) -> html.Div:
                      style={"height": "32px", "width": "32px"},
                      title="Lattes"),
             href=member.get("lattes", "#"),
-            target="_blank", className="me-2"
+            target="_blank"
         )
     ]
-    if member.get("researchgate"):
-        links.append(
-            html.A(
-                html.Img(src=app.get_asset_url('research_logo.png'),
-                         style={"height": "32px", "width": "32px"},
-                         title="ResearchGate"),
-                href=member["researchgate"],
-                target="_blank"
-            )
-        )
 
     return html.Div([
         html.Span(member["role"],
@@ -169,7 +156,7 @@ def layout_contato(app):
         dbc.Row([
             dbc.Col([
                 html.Img(src=app.get_asset_url('geocalor.png'), className="logo-img"),
-                html.H2("Equipe e Contato", className="text-center my-4")
+                html.H2("Equipe e contato", className="text-center my-4")
             ], width=12)
         ], className="text-center"),
 
