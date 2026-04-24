@@ -65,13 +65,15 @@ class Visualizer:
             logger.warning("Nenhum dado após filtro — cidade=%s, anos=%s-%s", cidade, ano_inicio, ano_fim)
             return go.Figure()
 
+        # Scattergl (WebGL) para datasets grandes — muito mais rápido no browser
+        Trace = go.Scattergl if len(dff) > 1500 else go.Scatter
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=dff["index"], y=dff["tempMax"], name="Máxima",
-                                 line=dict(color=RED)))
-        fig.add_trace(go.Scatter(x=dff["index"], y=dff["tempMed"], name="Média",
-                                 line=dict(color=ORANGE)))
-        fig.add_trace(go.Scatter(x=dff["index"], y=dff["tempMin"], name="Mínima",
-                                 line=dict(color=TEAL)))
+        fig.add_trace(Trace(x=dff["index"], y=dff["tempMax"], name="Máxima",
+                            mode="lines", line=dict(color=RED)))
+        fig.add_trace(Trace(x=dff["index"], y=dff["tempMed"], name="Média",
+                            mode="lines", line=dict(color=ORANGE)))
+        fig.add_trace(Trace(x=dff["index"], y=dff["tempMin"], name="Mínima",
+                            mode="lines", line=dict(color=TEAL)))
 
         fig.update_layout(
             **self._layout_temp_padrao(
@@ -142,7 +144,7 @@ class Visualizer:
         if ano is not None:
             title += f" — {ano}"
         else:
-            title += " (Todos os anos)"
+            title += " (1981 - 2023)"
 
         fig.update_layout(
             title=title,
@@ -242,14 +244,15 @@ class Visualizer:
         amplitude = dff["tempMax"] - dff["tempMin"]
         amp_mm30  = amplitude.rolling(window=30, min_periods=1).mean()
 
+        Trace = go.Scattergl if len(dff) > 1500 else go.Scatter
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
+        fig.add_trace(Trace(
             x=dff["index"], y=amplitude, name="Amplitude diária",
             mode="lines", line=dict(color=GREEN, width=1.2),
             fill="tozeroy", fillcolor="rgba(110, 193, 166, 0.18)",
             hovertemplate="<b>%{x|%d/%m/%Y}</b><br>Amplitude: %{y:.1f} °C<extra></extra>",
         ))
-        fig.add_trace(go.Scatter(
+        fig.add_trace(Trace(
             x=dff["index"], y=amp_mm30, name="Média móvel 30 dias",
             mode="lines", line=dict(color=PRIMARY, width=2.4, dash="dash"),
             hovertemplate="<b>%{x|%d/%m/%Y}</b><br>MM30: %{y:.1f} °C<extra></extra>",
@@ -303,6 +306,20 @@ class Visualizer:
 
         colors = [RED if a >= 0 else TEAL for a in mensal["anomalia"]]
 
+        # dtick dinâmico: evita rótulos sobrepostos quando muitos anos selecionados
+        n_months = len(mensal)
+        if n_months > 240:      # > 20 anos → rótulo a cada 2 anos
+            dtick_val, tick_fmt, tick_angle = "M24", "%Y", -45
+        elif n_months > 96:     # > 8 anos → rótulo anual
+            dtick_val, tick_fmt, tick_angle = "M12", "%Y", -45
+        elif n_months > 36:     # > 3 anos → semestral
+            dtick_val, tick_fmt, tick_angle = "M6", "%b %Y", -35
+        else:
+            dtick_val, tick_fmt, tick_angle = "M3", "%b %Y", -35
+
+        # Altura proporcional: mais espaço para muitas barras
+        chart_h = 420 if n_months <= 60 else 460
+
         fig = go.Figure()
         fig.add_trace(go.Bar(
             x=mensal["date"], y=mensal["anomalia"], name="Anomalia",
@@ -313,13 +330,16 @@ class Visualizer:
         fig.update_layout(
             **self._layout_temp_padrao(
                 f"Anomalia de temperatura média mensal — {cidade} ({ano_inicio}–{ano_fim})",
-                height=400,
+                height=chart_h,
             ),
             showlegend=False,
-            bargap=0.25,
+            bargap=0.15,
         )
         fig.update_xaxes(
-            title=dict(text="Mês"), tickformat="%b %Y", tickangle=-35, dtick="M6",
+            title=dict(text="Período"),
+            tickformat=tick_fmt,
+            tickangle=tick_angle,
+            dtick=dtick_val,
             showgrid=True, gridcolor=GRID_COLOR, zeroline=False, linecolor="rgba(0,0,0,0.15)",
         )
         fig.update_yaxes(
@@ -352,14 +372,15 @@ class Visualizer:
         threshold_95 = dff["tempMax"].quantile(0.95) if not dff["tempMax"].empty else None
         half_day = pd.Timedelta(days=0.5)
 
-        hw_df    = dff[dff["isHW"] == "TRUE"]
-        opacities = hw_df["HW_Intensity"].str.strip().str.lower().map(_intensity_opacity).fillna(0.3)
+        _isHW_mask = (dff["isHW"] == "TRUE") | (dff["isHW"] == True)
+        hw_df    = dff[_isHW_mask]
+        opacities = hw_df["HW_Intensity"].fillna("").astype(str).str.strip().str.lower().map(_intensity_opacity).fillna(0.3)
         shapes = [
             {
                 "type": "rect", "xref": "x", "yref": "paper",
                 "x0": idx - half_day, "x1": idx + half_day,
                 "y0": 0, "y1": 1,
-                "fillcolor": ORANGE, "opacity": op,
+                "fillcolor": ORANGE, "opacity": float(op),
                 "line": {"width": 0}, "layer": "below",
             }
             for idx, op in zip(hw_df["index"], opacities)
@@ -423,14 +444,15 @@ class Visualizer:
         _intensity_opacity = {"low-intensity": 0.4, "severe": 0.6, "extreme": 0.8}
         half_day = pd.Timedelta(days=0.5)
 
-        hw_df     = dff[dff["isHW"] == "TRUE"]
-        opacities = hw_df["HW_Intensity"].str.strip().str.lower().map(_intensity_opacity).fillna(0.3)
+        _isHW_mask2 = (dff["isHW"] == "TRUE") | (dff["isHW"] == True)
+        hw_df     = dff[_isHW_mask2]
+        opacities = hw_df["HW_Intensity"].fillna("").astype(str).str.strip().str.lower().map(_intensity_opacity).fillna(0.3)
         shapes = [
             {
                 "type": "rect", "xref": "x", "yref": "paper",
                 "x0": idx - half_day, "x1": idx + half_day,
                 "y0": 0, "y1": 1,
-                "fillcolor": ORANGE, "opacity": op,
+                "fillcolor": ORANGE, "opacity": float(op),
                 "line": {"width": 0}, "layer": "below",
             }
             for idx, op in zip(hw_df["index"], opacities)

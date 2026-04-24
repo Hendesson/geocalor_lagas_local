@@ -204,6 +204,49 @@ def serie_mensal(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     return _df_agg_cache[key]
 
 
+def serie_mensal_taxa(sistema: str, causa: str, rm: str) -> pd.DataFrame:
+    """Taxa mensal por 10.000 hab.: (ANO_*, MES_*, N, taxa). taxa=NaN se pop indisponível."""
+    key = ("serie_mensal_taxa", sistema, causa, rm)
+    if key in _df_agg_cache:
+        return _df_agg_cache[key]
+
+    df_serie = serie_mensal(sistema, causa, rm)
+    ano_col  = _ANO_COL[sistema]
+    mes_col  = _MES_COL[sistema]
+    if df_serie.empty:
+        _df_agg_cache[key] = pd.DataFrame(columns=[ano_col, mes_col, "N", "taxa"])
+        return _df_agg_cache[key]
+
+    pop = _load("populacao_RM.parquet")
+    pop_por_ano: Dict[int, float] = {}
+    if not pop.empty and "NOME_RM" in pop.columns:
+        norm_rm = _norm(rm)
+        if "NOME_RM_NORM" not in pop.columns:
+            pop = pop.copy()
+            pop["NOME_RM_NORM"] = pop["NOME_RM"].apply(_norm)
+        pop_rm = pop[pop["NOME_RM_NORM"] == norm_rm]
+        p_cols = {int(c.replace("pop_", "")): c
+                  for c in pop_rm.columns
+                  if c.startswith("pop_") and c.replace("pop_", "").isdigit()}
+        pop_por_ano = {yr: float(pop_rm[col].sum()) for yr, col in p_cols.items()
+                       if pop_rm[col].sum() > 0}
+
+    def _get_pop(ano: int) -> Optional[float]:
+        if not pop_por_ano:
+            return None
+        if ano in pop_por_ano:
+            return pop_por_ano[ano]
+        return pop_por_ano[min(pop_por_ano, key=lambda a: abs(a - ano))]
+
+    out = df_serie[[ano_col, mes_col, "N"]].copy()
+    out[ano_col] = pd.to_numeric(out[ano_col], errors="coerce")
+    pop_vals = out[ano_col].map(lambda a: _get_pop(int(a)) if pd.notna(a) else None)
+    out["taxa"] = np.where(pop_vals.notna() & (pop_vals > 0),
+                           out["N"] / pop_vals * 10000.0, np.nan)
+    _df_agg_cache[key] = out.sort_values([ano_col, mes_col])
+    return _df_agg_cache[key]
+
+
 def taxa_anual(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     """Taxa anual por 1.000 hab.: (ANO_*, N, taxa). taxa=NaN se pop indisponível."""
     key = ("taxa_anual", sistema, causa, rm)
@@ -258,6 +301,21 @@ def sexo_por_ano(sistema: str, causa: str, rm: str) -> pd.DataFrame:
             _df_agg_cache[key] = pd.DataFrame(columns=[ano_col, "SEXO", "N"])
         else:
             _df_agg_cache[key] = dff[[ano_col, "SEXO", "N"]].sort_values([ano_col, "SEXO"])
+    return _df_agg_cache[key]
+
+
+def sexo_por_faixa(sistema: str, causa: str, rm: str) -> pd.DataFrame:
+    """Contagem por sexo e faixa etária para pirâmide: (SEXO, FAIXA_ETARIA, N)."""
+    key = ("sexo_por_faixa", sistema, causa, rm)
+    if key not in _df_agg_cache:
+        df = _load(f"{_prefix(sistema, causa)}_sexo_faixa.parquet")
+        dff = _filter_rm(df, rm)
+        if dff.empty or "SEXO" not in dff.columns or "FAIXA_ETARIA" not in dff.columns:
+            _df_agg_cache[key] = pd.DataFrame(columns=["SEXO", "FAIXA_ETARIA", "N"])
+        else:
+            result = (dff.groupby(["SEXO", "FAIXA_ETARIA"])["N"]
+                        .sum().reset_index())
+            _df_agg_cache[key] = result
     return _df_agg_cache[key]
 
 

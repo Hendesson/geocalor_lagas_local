@@ -164,6 +164,11 @@ def _processa_sih(csv_path: Path, prefixo: str) -> None:
     g5 = df.groupby(["NOME_RM", "FAIXA_ETARIA"], dropna=True).size().reset_index(name="N")
     g5.to_parquet(OUT / f"{prefixo}_faixa_etaria.parquet", index=False)
 
+    # 5b. Pirâmide etária: sexo × faixa etária
+    if "SEXO" in df.columns:
+        g_pir = df.groupby(["NOME_RM", "SEXO", "FAIXA_ETARIA"], dropna=True).size().reset_index(name="N")
+        g_pir.to_parquet(OUT / f"{prefixo}_sexo_faixa.parquet", index=False)
+
     # 6. Caráter de internação (SIH específico)
     if "CAR_INT" in df.columns:
         g6 = df.groupby(["NOME_RM", "CAR_INT"], dropna=True).size().reset_index(name="N")
@@ -242,6 +247,11 @@ def _processa_sim(csv_path: Path, prefixo: str) -> None:
     # 5. Faixa etária
     g5 = df.groupby(["NOME_RM", "FAIXA_ETARIA"], dropna=True).size().reset_index(name="N")
     g5.to_parquet(OUT / f"{prefixo}_faixa_etaria.parquet", index=False)
+
+    # 5b. Pirâmide etária: sexo × faixa etária
+    if "SEXO" in df.columns:
+        g_pir = df.groupby(["NOME_RM", "SEXO", "FAIXA_ETARIA"], dropna=True).size().reset_index(name="N")
+        g_pir.to_parquet(OUT / f"{prefixo}_sexo_faixa.parquet", index=False)
 
     # 6. Local do óbito (SIM específico)
     if "LOCOCOR" in df.columns:

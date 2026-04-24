@@ -47,18 +47,14 @@ try:
     if not isinstance(anos, list):
         anos = []
     logger.info("Dados: %s linhas, %s cidades", len(df), len(cidades))
-    # Aquece o mapa Folium em background para que o primeiro acesso a /temperaturas seja rápido
+    # Pré-aquece os dois heatmaps pesados para que o primeiro clique seja rápido
     if not df.empty:
         try:
-            import threading
-            threading.Thread(
-                target=temperaturas.build_mapa_estacoes,
-                args=(df,),
-                daemon=True,
-            ).start()
-            logger.info("Build do mapa de estações iniciado em background.")
+            data_processor.prepare_heatmap_data()
+            data_processor.prepare_heatmap_events_data()
+            logger.info("Caches de heatmap pré-computados.")
         except Exception as _e:
-            logger.warning("Erro ao iniciar build do mapa: %s", _e)
+            logger.warning("Erro ao pré-computar caches de heatmap: %s", _e)
 except Exception as e:
     logger.error("Erro ao inicializar dados: %s", e)
     df = pd.DataFrame()
