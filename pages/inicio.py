@@ -4,6 +4,8 @@ Página inicial — boas-vindas e apoiadores (ex-dashboard-inicio).
 from dash import html
 import dash_bootstrap_components as dbc
 
+from components import info_card
+
 
 def logo_apoiador(app, img, href, height="60px"):
     return html.A(
@@ -20,7 +22,7 @@ def logo_apoiador(app, img, href, height="60px"):
 
 APOIADORES = [
     ("unb.png",               "https://www.unb.br",                           "UnB"),
-    ("fiocruz.jpg",            "https://portal.fiocruz.br",                    "Fiocruz"),
+    ("fiocruz.png",            "https://portal.fiocruz.br",                    "Fiocruz"),
     ("ufrj_logo.png",          "https://ufrj.br",                              "UFRJ"),
     ("ird.png",                "https://en.ird.fr/",                           "IRD"),
     ("cnpq.png",               "https://www.gov.br/cnpq",                      "CNPq"),
@@ -144,65 +146,105 @@ def apoiadores_row(app):
 
 def layout_inicio(app):
     return dbc.Container([
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardBody([
-                        html.H3("Sobre o GeoCalor",
-                                className="text-center mb-4"),
-                        html.Div([
-                            html.A(
-                                html.Img(
-                                    src=app.get_asset_url('logo.png'),
-                                    style={'height': '80px', 'width': 'auto'},
-                                    className="img-fluid"
-                                ),
-                                href="http://www.lagas.unb.br",
-                                target="_blank"
-                            ),
-                            html.A(
-                                html.Img(
-                                    src=app.get_asset_url('geocalor_nome.png'),
-                                    style={'height': '60px', 'width': 'auto'},
-                                    className="img-fluid"
-                                ),
-                                href="http://www.lagas.unb.br/index.php/produtos/geocalor",
-                                target="_blank"
-                            )
-                        ], className="d-flex justify-content-center align-items-center mb-4 gap-4"),
-                        html.P(
-                            "O aumento da frequência e intensidade das ondas de calor, impulsionado "
-                            "pelas mudanças climáticas, tem ampliado os riscos à saúde da população, "
-                            "especialmente entre grupos mais vulneráveis.",
-                            className="text-center mb-3 text-muted"
-                        ),
-                        html.P(
-                            "O projeto GeoCalor, intitulado Indicadores Espaciais e Sistema de Alerta "
-                            "para Ondas de Calor para a Saúde Pública nas Regiões Metropolitanas "
-                            "Brasileiras, investiga os impactos das ondas de calor a partir da "
-                            "integração de dados climáticos e de saúde, com foco nas três regiões "
-                            "metropolitanas mais populosas de cada região do Brasil.",
-                            className="text-center mb-3 text-muted"
-                        ),
-                        html.P(
-                            "Este dashboard reúne dados de caracterização climática, ondas de calor, "
-                            "perfil epidemiológico e sistemas de alerta, permitindo visualizar padrões, "
-                            "identificar anomalias e apoiar o monitoramento, a comunicação de risco e "
-                            "o planejamento de ações em saúde, com o objetivo de gerar evidências "
-                            "científicas e subsidiar a atuação do Sistema Único de Saúde - SUS.",
-                            className="text-center mb-4 text-muted"
-                        ),
-                        html.Hr(className="my-4"),
-                        html.P("Publicações", className="section-heading text-center mb-4"),
-                        publicacoes_section(app),
-                        html.Hr(className="my-4"),
-                        html.P("Apoiadores e Financiadores", className="section-heading text-center mb-4"),
-                        apoiadores_row(app),
-                        html.Br(),
-                    ])
-                ], className="shadow-sm")
-            ], width=12, lg=10, className="mx-auto")
-        ]),
 
+        # ── Cabeçalho ────────────────────────────────────────────────────────
+        dbc.Row(dbc.Col([
+            html.Img(src=app.get_asset_url("geocalor.png"), className="logo-img"),
+            html.H2("Sobre o GeoCalor", className="text-center my-4"),
+        ], width=12), className="text-center mb-2"),
+
+        # ── Logos ────────────────────────────────────────────────────────────
+        dbc.Row(dbc.Col(
+            html.Div([
+                html.A(
+                    html.Img(
+                        src=app.get_asset_url("logo.png"),
+                        style={"height": "80px", "width": "auto"},
+                        className="img-fluid",
+                    ),
+                    href="http://www.lagas.unb.br",
+                    target="_blank",
+                ),
+                html.A(
+                    html.Img(
+                        src=app.get_asset_url("geocalor_nome.png"),
+                        style={"height": "60px", "width": "auto"},
+                        className="img-fluid",
+                    ),
+                    href="http://www.lagas.unb.br/index.php/produtos/geocalor",
+                    target="_blank",
+                ),
+            ], className="d-flex justify-content-center align-items-center gap-4"),
+            width=12,
+        ), className="mb-4"),
+
+        # ── Identificação do projeto ──────────────────────────────────────
+        dbc.Row(dbc.Col(
+            info_card(
+                "",
+                html.Div([
+                    html.P([
+                        html.Span(
+                            "Projeto GeoCalor",
+                            style={"color": "#6ec1a6", "fontWeight": "700", "fontSize": "1.15rem"},
+                        ),
+                    ], className="mb-1"),
+                    html.P(
+                        "Indicadores espaciais e sistema de alerta para ondas de calor para a "
+                        "saúde pública nas regiões metropolitanas brasileiras",
+                        className="mb-2 text-muted",
+                    ),
+                    html.P([
+                        html.Span(
+                            "Chamada CNPQ/DECIT/SECTICS/MS Nº 18/2023 — Ciência de dados: "
+                            "mudanças climáticas e impactos para a saúde",
+                            style={"color": "#212529", "fontWeight": "700"},
+                        ),
+                    ], className="mb-1"),
+                    html.P("Coordenação: Helen Gurgel", className="mb-0 text-muted"),
+                ]),
+                fa_icon="fas fa-project-diagram",
+            ),
+            width=12,
+        ), className="mb-2"),
+
+        # ── Texto de apresentação ─────────────────────────────────────────
+        dbc.Row(dbc.Col(
+            info_card(
+                "",
+                html.Div([
+                    html.P(
+                        "O aumento da frequência e intensidade das ondas de calor, impulsionado "
+                        "pelas mudanças climáticas, tem ampliado os riscos à saúde da população, "
+                        "especialmente entre grupos mais vulneráveis.",
+                        className="mb-2 text-muted",
+                    ),
+                    html.P(
+                        "O projeto GeoCalor investiga os impactos das ondas de calor a partir da "
+                        "integração de dados climáticos e de saúde, com foco nas três regiões "
+                        "metropolitanas mais populosas de cada região do Brasil.",
+                        className="mb-2 text-muted",
+                    ),
+                    html.P(
+                        "Este dashboard reúne dados de caracterização climática, ondas de calor, "
+                        "perfil epidemiológico e sistemas de alerta, permitindo visualizar padrões, "
+                        "identificar anomalias e apoiar o monitoramento, a comunicação de risco e "
+                        "o planejamento de ações em saúde, com o objetivo de gerar evidências "
+                        "científicas e subsidiar a atuação do Sistema Único de Saúde — SUS.",
+                        className="mb-0 text-muted",
+                    ),
+                ]),
+                fa_icon="fas fa-info-circle",
+            ),
+            width=12,
+        ), className="mb-3"),
+
+        html.Hr(className="my-4"),
+        html.P("Publicações", className="section-heading text-center mb-4"),
+        publicacoes_section(app),
+        html.Hr(className="my-4"),
+        html.P("Apoiadores e Financiadores", className="section-heading text-center mb-4"),
+        apoiadores_row(app),
         html.Br(), html.Br(),
+
     ], fluid=True, className="py-4")
