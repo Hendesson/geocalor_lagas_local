@@ -13,10 +13,12 @@ import numpy as np
 import pandas as pd
 
 from db import execute as db_execute
+from config_paths import ASSETS_DIR
 
 logger = logging.getLogger(__name__)
 
 PROCESSED = Path(__file__).parent / "processed" / "sih_sim"
+_GEOJSON_PATH = Path(ASSETS_DIR) / "geojson_rmb.json"
 
 _ANO_COL = {"SIH": "ANO_INTERNACAO", "SIM": "ANO_OBITO"}
 _MES_COL = {"SIH": "MES_INTERNACAO", "SIM": "MES_OBITO"}
@@ -70,6 +72,8 @@ _geojson_all_cache: Optional[dict] = None
 _geojson_rm_cache: Dict[str, Optional[dict]] = {}
 # Cache de mapa_data por (sistema, causa, rm, ano)
 _mapa_data_cache: Dict[tuple, Optional[dict]] = {}
+# Cache de mapa_data_all_years por (sistema, causa, rm)
+_mapa_all_years_cache: Dict[tuple, Optional[dict]] = {}
 # Cache de DataFrames das funções de agregação (evita re-filtrar/re-agregar por callback)
 _df_agg_cache: Dict[tuple, pd.DataFrame] = {}
 
@@ -418,11 +422,11 @@ def estciv(causa: str, rm: str) -> pd.DataFrame:
 # ── Mapa ─────────────────────────────────────────────────────────────────────
 
 def _load_geojson_all() -> Optional[dict]:
-    """Carrega geojson_rm.json do disco uma única vez por sessão."""
+    """Carrega geojson_rmb.json (simplificado, assets) do disco uma única vez por sessão."""
     global _geojson_all_cache
     if _geojson_all_cache is not None:
         return _geojson_all_cache or None
-    geo_path = PROCESSED / "geojson_rm.json"
+    geo_path = _GEOJSON_PATH
     if not geo_path.exists():
         logger.warning("GeoJSON não encontrado: %s", geo_path)
         _geojson_all_cache = {}
@@ -630,12 +634,18 @@ def mapa_data_all_years(sistema: str, causa: str, rm: str) -> Optional[dict]:
     Retorna {yearly: [(ano, taxa_df), ...], global_min, global_max, geo_data} ou None.
     Computa escala global (min/max) compartilhada para comparação entre anos.
     """
+    cache_key = (sistema, causa, rm)
+    if cache_key in _mapa_all_years_cache:
+        return _mapa_all_years_cache[cache_key]
+
     anos = anos_disponiveis(sistema, causa, rm)
     if not anos:
+        _mapa_all_years_cache[cache_key] = None
         return None
 
     geo_data = _geojson_for_rm(rm)
     if geo_data is None:
+        _mapa_all_years_cache[cache_key] = None
         return None
 
     yearly: List[tuple] = []
@@ -658,18 +668,20 @@ def mapa_data_all_years(sistema: str, causa: str, rm: str) -> Optional[dict]:
             all_taxa_vals.extend(vals.tolist())
 
     if not yearly:
-        if no_overlap_count > 0:
-            return {"no_overlap": True}
-        return None
+        result = {"no_overlap": True} if no_overlap_count > 0 else None
+        _mapa_all_years_cache[cache_key] = result
+        return result
 
     global_min = float(min(all_taxa_vals)) if all_taxa_vals else 0.0
     global_max = float(max(all_taxa_vals)) if all_taxa_vals else 1.0
     if global_min == global_max:
         global_max = global_min + 1.0
 
-    return {
+    result = {
         "yearly":     yearly,
         "global_min": global_min,
         "global_max": global_max,
         "geo_data":   geo_data,
     }
+    _mapa_all_years_cache[cache_key] = result
+    return result
