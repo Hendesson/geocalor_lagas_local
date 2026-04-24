@@ -17,6 +17,9 @@ window.dashExtensions = Object.assign({}, window.dashExtensions, {
             var nome = p.NOME_PT != null ? p.NOME_PT : 'Sem nome';
             var num = p.NUM_PROTOC != null ? p.NUM_PROTOC : '-';
             layer.bindPopup('<strong>' + nome + '</strong><br>N\u00famero de protocolos: ' + num);
+        },
+        function2: function(feature) {
+            return { fillColor: '#ffb347', color: '#333333', weight: 1.0, fillOpacity: 0.18 };
         }
     }
 });
