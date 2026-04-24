@@ -11,11 +11,11 @@ import pandas as pd
 import plotly.graph_objs as go
 
 from config import YEAR_MIN, YEAR_MAX
-from config_paths import PROCESSED_DIR
+from config_paths import ASSETS_DIR
 from components import chart_card, info_card, dd, dl_btn
 
 _mapa_estacoes_html: str | None = None
-_GEOJSON_PATH = os.path.join(PROCESSED_DIR, "sih_sim", "geojson_rm.json")
+_GEOJSON_PATH = os.path.join(ASSETS_DIR, "geojson_rmb.json")
 
 
 def _popup_estacao(cidade, lat, lon, n_reg, y_min, y_max):

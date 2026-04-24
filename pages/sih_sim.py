@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 # Cache de nomes de município por objeto GeoJSON (evita re-parse por callback)
 _geojson_name_cache: dict = {}
+# Cache das figuras já construídas para o modo "todos os anos" por (sistema, causa, rm)
+_mapa_all_figs_cache: dict = {}
 
 
 def _nota(texto: str) -> html.P:
@@ -1009,7 +1011,13 @@ def register_callbacks_sih_sim(app) -> None:
 
         # ── Modo "Todos os anos" ──────────────────────────────────────────────
         if modo == "all":
-            titulo        = f"Todos os anos — taxa de {label_evento} por doenças {label_causa} — {rm}"
+            titulo = f"Todos os anos — taxa de {label_evento} por doenças {label_causa} — {rm}"
+
+            _fig_key = (sistema, causa, rm)
+            if _fig_key in _mapa_all_figs_cache:
+                cached = _mapa_all_figs_cache[_fig_key]
+                return cached["children"], titulo, cached["aviso"]
+
             all_years_data = ds.mapa_data_all_years(sistema or "SIH", causa or "CARDIOVASCULAR", rm)
             if all_years_data is None:
                 aviso = "Sem dados geográficos disponíveis para esta RM."
@@ -1053,7 +1061,11 @@ def register_callbacks_sih_sim(app) -> None:
             if not cards:
                 aviso = "Sem dados geográficos disponíveis para esta RM."
                 return [dcc.Graph(figure=_empty("Sem dados disponíveis", 400))], titulo, aviso
-            return [dbc.Row(cards, className="g-3")], titulo, aviso
+
+            aviso = ""
+            children = [dbc.Row(cards, className="g-3")]
+            _mapa_all_figs_cache[_fig_key] = {"children": children, "aviso": aviso}
+            return children, titulo, aviso
 
         # ── Modo ano único ────────────────────────────────────────────────────
         titulo = f"Taxa de {label_evento} por doenças {label_causa} por 1.000 hab. — {rm} ({ano})"
