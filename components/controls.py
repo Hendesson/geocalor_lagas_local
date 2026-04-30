@@ -33,7 +33,7 @@ def dd(
             value=value,
             multi=multi,
             clearable=False,
-            style={"minWidth": min_width},
+            style={"minWidth": "0", "width": "100%"},
         )
     )
     return html.Div(items, style={"flex": "1", "minWidth": min_width})
