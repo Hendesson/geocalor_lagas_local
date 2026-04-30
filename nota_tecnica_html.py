@@ -38,6 +38,14 @@ NOTA_SISTEMAS_ALERTA_LINKS = r"""<!DOCTYPE html>
       tr:hover td { background: inherit; }
     }
   </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LHX5DN0BCW"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-LHX5DN0BCW');
+  </script>
 </head>
 <body>
 
@@ -299,6 +307,14 @@ NOTA_MORTALIDADE = r"""<!DOCTYPE html>
       .no-print { display: none; }
     }
   </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LHX5DN0BCW"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-LHX5DN0BCW');
+  </script>
 </head>
 <body>
   <div style="display:flex;align-items:center;gap:24px;margin:16px 0 24px;flex-wrap:wrap;">
@@ -397,6 +413,14 @@ NOTA_CORRELACAO = r"""<!DOCTYPE html>
       .no-print { display: none; }
     }
   </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LHX5DN0BCW"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-LHX5DN0BCW');
+  </script>
 </head>
 <body>
   <div style="display:flex;align-items:center;gap:24px;margin:16px 0 24px;flex-wrap:wrap;">
@@ -506,6 +530,14 @@ NOTA_TEMPERATURAS = r"""<!DOCTYPE html>
       .no-print { display: none; }
     }
   </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LHX5DN0BCW"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-LHX5DN0BCW');
+  </script>
 </head>
 <body>
   <div style="display:flex;align-items:center;gap:24px;margin:16px 0 24px;flex-wrap:wrap;">
@@ -599,6 +631,14 @@ NOTA_ONDAS = r"""<!DOCTYPE html>
     @media print { a[href]::after { content: none !important; }
                    .no-print { display: none; } }
   </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LHX5DN0BCW"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-LHX5DN0BCW');
+  </script>
 </head>
 <body>
   <div style="display:flex;align-items:center;gap:24px;margin:16px 0 24px;flex-wrap:wrap;">
@@ -704,6 +744,14 @@ NOTA_SIH_SIM = r"""<!DOCTYPE html>
     @media print { a[href]::after { content: none !important; }
                    .no-print { display: none; } }
   </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LHX5DN0BCW"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-LHX5DN0BCW');
+  </script>
 </head>
 <body>
   <div style="display:flex;align-items:center;gap:24px;margin:16px 0 24px;flex-wrap:wrap;">

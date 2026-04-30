@@ -32,6 +32,9 @@ _CORE_TABLES = {
 # ── Thread-local storage (DuckDB: uma conexão por thread) ────────────────────
 _local = threading.local()
 
+# Lista de parquets SIH/SIM — calculada uma vez no import, não a cada nova thread
+_SIH_PARQUETS: list = sorted(_SIH_DIR.glob("*.parquet")) if _SIH_DIR.exists() else []
+
 
 def _make_conn() -> duckdb.DuckDBPyConnection:
     """Cria conexão DuckDB in-memory e registra as VIEWs sobre os parquets."""
@@ -71,10 +74,10 @@ def _register_local_views(conn: duckdb.DuckDBPyConnection) -> None:
     for table, path in _CORE_TABLES.items():
         _create_view(conn, table, path)
 
-    if _SIH_DIR.exists():
-        for p in sorted(_SIH_DIR.glob("*.parquet")):
+    if _SIH_PARQUETS:
+        for p in _SIH_PARQUETS:
             _create_view(conn, p.stem, p)
-    else:
+    elif not _SIH_DIR.exists():
         logger.warning(
             "Pasta sih_sim não encontrada: %s — execute prepare_sih_sim_data.py", _SIH_DIR
         )

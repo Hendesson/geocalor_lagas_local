@@ -5,7 +5,6 @@ import os
 import hashlib
 import pickle
 import joblib
-from functools import lru_cache
 from typing import Any, Optional, Callable
 import pandas as pd
 import logging
@@ -81,7 +80,7 @@ class CacheManager:
         
         try:
             if use_joblib and isinstance(value, pd.DataFrame):
-                joblib.dump(value, cache_path, compress=3)
+                joblib.dump(value, cache_path, compress=1)
             else:
                 with open(cache_path, 'wb') as f:
                     pickle.dump(value, f)
@@ -113,35 +112,36 @@ class CacheManager:
 # Instância global
 cache_manager = CacheManager()
 
+# Cache em memória por processo — evita disco em chamadas repetidas na mesma sessão
+_mem_cache: dict = {}
+
+
 def cached_dataframe(key_prefix: str = ""):
-    """
-    Decorator para cachear resultados de funções que retornam DataFrames.
-    
-    Args:
-        key_prefix: Prefixo para a chave do cache
-    """
+    """Decorator para cachear resultados de funções que retornam DataFrames."""
     def decorator(func: Callable) -> Callable:
-        @lru_cache(maxsize=32)
         def wrapper(*args, **kwargs):
-            # Gera chave única
             cache_key = cache_manager._get_cache_key(*args, **kwargs)
             full_key = f"{key_prefix}_{cache_key}" if key_prefix else cache_key
-            
-            # Tenta recuperar do cache
+
+            if full_key in _mem_cache:
+                logger.debug("Mem-cache hit: %s", full_key)
+                return _mem_cache[full_key]
+
             cached = cache_manager.get(full_key)
             if cached is not None:
-                logger.debug(f"Cache hit: {full_key}")
+                logger.debug("Disk-cache hit: %s", full_key)
+                _mem_cache[full_key] = cached
                 return cached
-            
-            # Executa função e armazena resultado
-            logger.debug(f"Cache miss: {full_key}")
+
+            logger.debug("Cache miss: %s", full_key)
             result = func(*args, **kwargs)
-            
+
             if isinstance(result, pd.DataFrame):
                 cache_manager.set(full_key, result, use_joblib=True)
-            
+            _mem_cache[full_key] = result
+
             return result
-        
+
         return wrapper
     return decorator
 

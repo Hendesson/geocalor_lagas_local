@@ -207,20 +207,6 @@ class DataProcessor:
             logger.exception("Detalhes do erro:")
             return pd.DataFrame()
 
-    def _normalize_isHW(self, series: pd.Series) -> pd.Series:
-        """
-        Normaliza a coluna isHW para garantir comparações corretas.
-        Converte para string uppercase e trata todos os casos possíveis.
-        """
-        if series.dtype == 'bool':
-            return series.map({True: "TRUE", False: "FALSE"}).astype(str)
-        elif series.dtype in ['int64', 'int32', 'float64', 'float32']:
-            return series.map({1: "TRUE", 1.0: "TRUE", 0: "FALSE", 0.0: "FALSE"}).fillna("FALSE").astype(str)
-        else:
-            normalized = series.astype(str).str.upper().str.strip()
-            normalized = normalized.replace(["", "nan", "NAN", "NONE", "NULL"], "FALSE")
-            return normalized
-
     @cached_dataframe(key_prefix="hw_monthly")
     def calculate_hw_monthly(self, cidade: str, ano: int) -> pd.DataFrame:  # noqa: C901
         """
@@ -458,20 +444,11 @@ class DataProcessor:
         # Identifica os grupos que correspondem a eventos (duração >= 3)
         event_groups = sequence_durations[sequence_durations['duration'] >= 3][['cidade', '_temp_group']].copy()
 
-        # Marca os dias que fazem parte de eventos de onda de calor
-        df_copy['is_event'] = False
-        
-        # Merge com event_groups para marcar os dias que estão nos grupos válidos
-        df_copy = pd.merge(
-            df_copy.reset_index(drop=True), 
-            event_groups.reset_index(drop=True), 
-            on=['cidade', '_temp_group'], 
-            how='left', 
-            indicator=True
-        )
-        
-        df_copy['is_event'] = df_copy['_merge'] == 'both'
-        df_copy = df_copy.drop(columns=['_merge', '_temp_group'])
+        # Marca dias que pertencem a grupos de evento via MultiIndex isin (mais rápido que merge)
+        event_idx = pd.MultiIndex.from_frame(event_groups[['cidade', '_temp_group']])
+        df_keys   = pd.MultiIndex.from_arrays([df_copy['cidade'], df_copy['_temp_group']])
+        df_copy['is_event'] = df_keys.isin(event_idx)
+        df_copy = df_copy.drop(columns=['_temp_group'])
 
         # Identifica o início de cada evento (primeiro dia de cada sequência válida)
         df_copy['event_start'] = df_copy.groupby('cidade')['is_event'].transform(

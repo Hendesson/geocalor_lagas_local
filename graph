@@ -1,0 +1,34 @@
+import plotly.express as px
+import pandas as pd
+
+# 1. Carregamento dos dados (exemplo de colunas necessárias)
+# 'Year': Ano do evento
+# 'Date': Mês/Dia (convertido para eixo Y)
+# 'Duration': Duração em dias (tamanho da bolha)
+# 'Tmax': Temperatura máxima (°C) (cor da bolha)
+df = pd.read_excel("C:/Users/Hendesson/Downloads/banco_dados_climaticos_consolidado_2025.xlsx")
+
+# 2. Criação do Gráfico de Bolhas (Bubble Chart)
+fig = px.scatter(df, 
+                 x='Year', 
+                 y='DateWithinYear', 
+                 size='Duration', 
+                 color='Tmax',
+                 color_continuous_scale='YlOrRd', # Escala Amarelo-Laranja-Vermelho
+                 title='Historical heatwaves (+)',
+                 labels={'Year': 'Year', 'DateWithinYear': 'Date within the year', 'Tmax': 'Tmax (°C)'},
+                 range_x=[1985, 2025])
+
+# 3. Customização para o estilo da imagem
+fig.update_layout(
+    plot_bgcolor='white',
+    xaxis=dict(showgrid=True, gridcolor='lightgrey'),
+    yaxis=dict(showgrid=True, gridcolor='lightgrey', 
+               tickvals=['2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01', '2026-11-01'],
+               ticktext=['01 June', '01 July', '01 August', '01 September', '01 October', '01 November'])
+)
+
+# Adicionar a área cinza do "Baseline" (1981-2010)
+fig.add_vrect(x0=1981, x1=2010, fillcolor="slategrey", opacity=0.3, layer="below", line_width=0)
+
+fig.show()

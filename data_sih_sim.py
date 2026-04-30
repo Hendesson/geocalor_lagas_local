@@ -89,6 +89,11 @@ def _norm(s: object) -> str:
     return "".join(c for c in s if not unicodedata.combining(c) and ord(c) < 128).upper()
 
 
+def _norm_cod(series: "pd.Series") -> "pd.Series":
+    """Normaliza COD_MUN6 para string de 6 dígitos sem espaços."""
+    return series.astype(str).str.strip().str[:6]
+
+
 def _fix_mojibake(s: object) -> str:
     """Corrige mojibake: UTF-8 bytes lidos como latin-1 (ex: 'RegiÃ£o' → 'Região')."""
     if not isinstance(s, str):
@@ -475,11 +480,11 @@ def _geojson_for_rm(rm: str) -> Optional[dict]:
         _geojson_rm_cache[norm_rm] = None
         return None
 
-    # Clona features e seta id uma única vez (6 dígitos para parear com DATASUS)
-    import copy as _copy
-    features_rm = _copy.deepcopy(features_rm)
-    for feat in features_rm:
-        feat["id"] = str(feat["properties"].get("COD_MUN6", "")).strip()[:6]
+    # Adiciona "id" a cada feature sem deep-copiar a geometria (que é read-only após este ponto)
+    features_rm = [
+        {**feat, "id": str(feat["properties"].get("COD_MUN6", "")).strip()[:6]}
+        for feat in features_rm
+    ]
 
     geojson_rm = {"type": "FeatureCollection", "features": features_rm}
 
@@ -501,10 +506,11 @@ def _geojson_for_rm(rm: str) -> Optional[dict]:
                     lats += [p[1] for p in ring]
         lat_c = float(np.mean(lats)) if lats else -15.0
         lon_c = float(np.mean(lons)) if lons else -50.0
-    except Exception:
+    except Exception as e:
+        logger.warning("Erro ao calcular centro geográfico para RM '%s': %s", rm, e)
         lat_c, lon_c = -15.0, -50.0
 
-    all_codes = [str(feat["properties"].get("COD_MUN6", "")).strip()[:6] for feat in features_rm]
+    all_codes = [feat["id"] for feat in features_rm]
     result = {
         "geojson":    geojson_rm,
         "lat_c":      lat_c,
@@ -570,7 +576,7 @@ def mapa_data(sistema: str, causa: str, rm: str, ano: int) -> Optional[dict]:
 
     dff = dff.rename(columns={mun_col: "COD_MUN6"})
     # Normaliza para 6 dígitos (DATASUS às vezes usa 7 com dígito verificador)
-    dff["COD_MUN6"] = dff["COD_MUN6"].astype(str).str.strip().str[:6]
+    dff["COD_MUN6"] = _norm_cod(dff["COD_MUN6"])
 
     # Verifica overlap com GeoJSON — avisa se parquet foi gerado com coluna errada
     geo_ids = set(geo_data.get("all_codes", []))
@@ -594,7 +600,7 @@ def mapa_data(sistema: str, causa: str, rm: str, ano: int) -> Optional[dict]:
         if pcol:
             pop_mun = pop[["COD_MUN6", pcol]].copy()
             # Normaliza para 6 dígitos — mesma regra do dado principal
-            pop_mun["COD_MUN6"] = pop_mun["COD_MUN6"].astype(str).str.strip().str[:6]
+            pop_mun["COD_MUN6"] = _norm_cod(pop_mun["COD_MUN6"])
             dff = dff.merge(pop_mun, on="COD_MUN6", how="left")
             dff["taxa"] = np.where(
                 dff[pcol].notna() & (dff[pcol] > 0),

@@ -4,6 +4,7 @@ Integra: início, temperaturas, ondas de calor, sistemas de alerta (página Dash
 """
 import logging
 import os
+from pathlib import Path
 
 import dash
 from dash import Input, Output, State, dcc, html, callback
@@ -29,8 +30,8 @@ PAGE_ENTRIES = [
     {"path": "/temperaturas",  "label": "Caracterização climática das RMB"},
     {"path": "/ondas",         "label": "Ondas de calor"},
     {"path": "/sih-sim",       "label": "Perfil epidemiológico"},
-    {"path": "/mortalidade",   "label": "Mortalidade por OC"},
-    {"path": "/correlacao",    "label": "Análise de correlação"},
+    {"path": "/mortalidade",   "label": "Mortalidade X OC"},
+    {"path": "/correlacao",    "label": "Internação X OC"},
     {"path": "/sistemas-alerta", "label": "Sistemas de alerta"},
     {"path": "/contato",       "label": "Equipe e contato"},
 ]
@@ -53,8 +54,8 @@ try:
             data_processor.prepare_heatmap_data()
             data_processor.prepare_heatmap_events_data()
             logger.info("Caches de heatmap pré-computados.")
-        except Exception as _e:
-            logger.warning("Erro ao pré-computar caches de heatmap: %s", _e)
+        except Exception as e:
+            logger.warning("Erro ao pré-computar caches de heatmap: %s", e)
 except Exception as e:
     logger.error("Erro ao inicializar dados: %s", e)
     df = pd.DataFrame()
@@ -72,38 +73,69 @@ app = dash.Dash(
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
 server = app.server
+_GA_ID = os.environ.get("GA_MEASUREMENT_ID", "G-LHX5DN0BCW")
+
 app.title = "Dashboard de Ondas de Calor — GeoCalor"
 
-app.index_string = """<!DOCTYPE html>
+app.index_string = f"""<!DOCTYPE html>
 <html>
     <head>
-        {%metas%}
-        <title>{%title%}</title>
+        {{%metas%}}
+        <title>{{%title%}}</title>
         <link rel="icon" type="image/png" href="/assets/geocalor.png">
         <!-- Google tag (gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-LHX5DN0BCW"></script>
+        <script async src="https://www.googletagmanager.com/gtag/js?id={_GA_ID}"></script>
         <script>
           window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
+          function gtag(){{dataLayer.push(arguments);}}
           gtag('js', new Date());
-          gtag('config', 'G-LHX5DN0BCW');
 
-          /* Notifica o GA a cada troca de rota do Dash (SPA) */
-          window.addEventListener('dash-layout-modified', function() {
-            gtag('event', 'page_view', {
-              page_path: window.location.pathname,
-              page_title: document.title,
-            });
-          });
+          /* Mapa de títulos por rota — GA e document.title recebem o título correto */
+          var _PAGE_TITLES = {{
+            '/':                'Sobre o GeoCalor — GeoCalor',
+            '/inicio':          'Sobre o GeoCalor — GeoCalor',
+            '/temperaturas':    'Caracterização Climática — GeoCalor',
+            '/ondas':           'Ondas de Calor — GeoCalor',
+            '/sih-sim':         'Perfil Epidemiológico — GeoCalor',
+            '/mortalidade':     'Mortalidade × OC — GeoCalor',
+            '/correlacao':      'Internação × OC — GeoCalor',
+            '/sistemas-alerta': 'Sistemas de Alerta — GeoCalor',
+            '/contato':         'Equipe e Contato — GeoCalor',
+          }};
+
+          function _gaPageView() {{
+            var path  = window.location.pathname;
+            var title = _PAGE_TITLES[path] || document.title;
+            document.title = title;
+            gtag('event', 'page_view', {{
+              page_path:  path,
+              page_title: title,
+              send_to:    '{_GA_ID}',
+            }});
+          }}
+
+          /* Carga inicial */
+          gtag('config', '{_GA_ID}', {{send_page_view: false}});
+          _gaPageView();
+
+          /* Rastreia navegação SPA via pushState (Dash usa React Router → pushState) */
+          (function() {{
+            var _push = history.pushState;
+            history.pushState = function(state, title, url) {{
+              _push.apply(history, arguments);
+              _gaPageView();
+            }};
+            window.addEventListener('popstate', _gaPageView);
+          }})();
         </script>
-        {%css%}
+        {{%css%}}
     </head>
     <body>
-        {%app_entry%}
+        {{%app_entry%}}
         <footer>
-            {%config%}
-            {%scripts%}
-            {%renderer%}
+            {{%config%}}
+            {{%scripts%}}
+            {{%renderer%}}
         </footer>
     </body>
 </html>"""
@@ -243,8 +275,12 @@ _MAPA_INDISPONIVEL = """<!DOCTYPE html><html><body style="
 
 def _serve_mapa(nome: str, filename: str):
     """Serve mapa HTML do diretório mapa_eventos/ ou página informativa."""
-    local = os.path.join(MAPA_EVENTOS_DIR, filename)
-    if os.path.exists(local):
+    safe_dir   = Path(MAPA_EVENTOS_DIR).resolve()
+    requested  = (safe_dir / filename).resolve()
+    if not str(requested).startswith(str(safe_dir) + os.sep) and requested != safe_dir:
+        logger.warning("_serve_mapa: tentativa de path traversal bloqueada: %s", filename)
+        return flask.Response("Forbidden", status=403)
+    if requested.exists():
         return flask.send_from_directory(MAPA_EVENTOS_DIR, filename)
     return flask.Response(_MAPA_INDISPONIVEL, mimetype="text/html; charset=utf-8")
 
@@ -318,5 +354,5 @@ contato.register_callbacks_contato(app)
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8050))
+    port = int(os.environ.get("PORT", 8051))
     app.run(host="127.0.0.1", port=port, debug=True)

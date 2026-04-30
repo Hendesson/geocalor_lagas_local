@@ -1,6 +1,6 @@
 import plotly.express as px
 import plotly.graph_objs as go
-from typing import List, Dict, Optional, Tuple
+from typing import List, Optional
 import pandas as pd
 import numpy as np
 import logging
@@ -385,7 +385,10 @@ class Visualizer:
             }
             for idx, op in zip(hw_df["index"], opacities)
         ]
-        ann_df = hw_df[hw_df["HWDay_Intensity"].notna()]
+        # Uma anotação por evento OC (primeiro dia) — usa HW_Intensity (evento)
+        ann_df = hw_df[hw_df["HW_Intensity"].notna()]
+        if "group" in ann_df.columns:
+            ann_df = ann_df.sort_values("index").groupby("group", sort=False).first().reset_index(drop=True)
         hw_annotations = [
             {
                 "x": idx, "y": 1.02, "xref": "x", "yref": "paper",
@@ -395,10 +398,11 @@ class Visualizer:
                 "font": {"color": "white", "size": 9},
                 "xanchor": "center", "yanchor": "bottom",
             }
-            for idx, txt in zip(ann_df["index"], ann_df["HWDay_Intensity"])
+            for idx, txt in zip(ann_df["index"], ann_df["HW_Intensity"])
         ]
         if threshold_95 is not None:
-            pk_df = dff[dff["tempMax"] >= threshold_95]
+            # Limita a 5 picos para evitar anotações sobrepostas
+            pk_df = dff[dff["tempMax"] >= threshold_95].nlargest(5, "tempMax")
             peak_annotations = [
                 {
                     "x": idx, "y": tmax, "xref": "x", "yref": "y",
@@ -457,7 +461,7 @@ class Visualizer:
             }
             for idx, op in zip(hw_df["index"], opacities)
         ]
-        ann_df = hw_df[hw_df["HWDay_Intensity"].notna()]
+        ann_df = hw_df[hw_df["HW_Intensity"].notna()]
         hw_annotations = [
             {
                 "x": idx, "y": 1.02, "xref": "x", "yref": "paper",
@@ -467,7 +471,7 @@ class Visualizer:
                 "font": {"color": "white", "size": 9},
                 "xanchor": "center", "yanchor": "bottom",
             }
-            for idx, txt in zip(ann_df["index"], ann_df["HWDay_Intensity"])
+            for idx, txt in zip(ann_df["index"], ann_df["HW_Intensity"])
         ]
 
         fig.update_layout(
