@@ -82,18 +82,37 @@ h3, h4, h5, .text-center.my-4 {
 .geocalor-nav-link {
     color: rgba(255, 255, 255, 0.92) !important;
     font-weight: 500;
-    border-radius: 10px;
-    padding: 0.45rem 0.85rem !important;
-    margin: 0 0.1rem;
+    border-radius: 0;
+    padding: 0.45rem 1.1rem !important;
+    margin: 0;
+    border: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.30);
     transition: background 0.2s, color 0.2s;
+}
+/* Última entrada recebe também borda direita */
+.geocalor-topnav .navbar-nav .nav-item:last-child .geocalor-nav-link {
+    border-right: 1px solid rgba(255, 255, 255, 0.30);
 }
 .geocalor-nav-link:hover,
 .geocalor-nav-link:focus {
     color: #fff !important;
     background: rgba(255, 255, 255, 0.14);
 }
-.geocalor-nav-link:active {
+.geocalor-nav-link:active,
+.geocalor-nav-link.active {
     background: rgba(255, 255, 255, 0.22);
+}
+/* Mobile: substitui linhas verticais por separador horizontal */
+@media (max-width: 991px) {
+    .geocalor-nav-link {
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.20);
+        border-radius: 0;
+    }
+    .geocalor-topnav .navbar-nav .nav-item:last-child .geocalor-nav-link {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.20);
+    }
 }
 .dashboard-shell {
     padding-top: 0;
@@ -146,14 +165,38 @@ h3, h4, h5, .text-center.my-4 {
 
 .btn-primary, .btn-outline-primary {
     background: linear-gradient(90deg, #6ec1a6 0%, #b3d6e6 100%);
-    border: none;
+    border: 1.5px solid #2b9eb3;
     color: #1761a0;
     font-weight: 600;
-    transition: background 0.3s;
+    transition: background 0.3s, border-color 0.3s, box-shadow 0.2s;
 }
 .btn-primary:hover, .btn-outline-primary:hover {
     background: linear-gradient(90deg, #b3d6e6 0%, #6ec1a6 100%);
+    border-color: #1761a0;
     color: #1761a0;
+    box-shadow: 0 2px 8px rgba(23, 97, 160, 0.18);
+}
+.btn-primary:focus, .btn-outline-primary:focus {
+    border-color: #1761a0;
+    box-shadow: 0 0 0 3px rgba(43, 158, 179, 0.28);
+}
+
+/* ── Botões de info e outline-secondary (notas técnicas, downloads) ──────── */
+.btn-info {
+    border: 1.5px solid #2b9eb3 !important;
+    font-weight: 600;
+}
+.btn-info:hover {
+    border-color: #1a7a8a !important;
+    box-shadow: 0 2px 8px rgba(43, 158, 179, 0.22);
+}
+.btn-outline-secondary {
+    border: 1.5px solid #8a9bb0 !important;
+    font-weight: 600;
+}
+.btn-outline-secondary:hover {
+    border-color: #1761a0 !important;
+    box-shadow: 0 2px 8px rgba(23, 97, 160, 0.14);
 }
 
 .btn-outline-danger {
@@ -562,6 +605,10 @@ h3, h4, h5, .text-center.my-4 {
     .calendar-day { width: 27px !important; height: 27px !important; font-size: 0.62rem; }
 }
 
+/* ── Dropdowns Dash: menu não cortado por card/container ────────────────── */
+/* dcc.Dropdown usa position:absolute — qualquer ancestral com overflow≠visible corta o menu */
+.card, .card-body { overflow: visible !important; }
+
 /* ── Garante que gráficos Plotly não ultrapassem o container ────────────── */
 .js-plotly-plot, .plot-container { max-width: 100% !important; }
 .dash-graph { overflow: hidden; }
@@ -594,9 +641,20 @@ h3, h4, h5, .text-center.my-4 {
     text-decoration: none;
 }
 
-/* ── Apoiadores: logo menor em mobile ───────────────────────────────────── */
+/* ── Apoiadores: logos responsivas ─────────────────────────────────────── */
+.apoiador-logo {
+    transition: transform 0.2s, filter 0.2s;
+    filter: grayscale(10%);
+}
+.apoiador-logo:hover {
+    transform: scale(1.07);
+    filter: grayscale(0%);
+}
+@media (max-width: 767px) {
+    .apoiador-logo { max-height: 70px !important; max-width: 150px !important; }
+}
 @media (max-width: 576px) {
-    .apoiador-logo { max-height: 48px !important; max-width: 110px !important; }
+    .apoiador-logo { max-height: 58px !important; max-width: 120px !important; }
 }
 
 /* ── Legendas do calendário de ondas de calor ──────────────────────────── */
@@ -636,6 +694,13 @@ h3, h4, h5, .text-center.my-4 {
     padding: 0.6rem 1.2rem;
     transition: background 0.2s, color 0.2s;
 }
+@media (max-width: 767px) {
+    .nav-tabs .nav-link { padding: 0.45rem 0.65rem; font-size: 0.8rem; }
+}
+@media (max-width: 480px) {
+    .nav-tabs .nav-link { padding: 0.4rem 0.45rem; font-size: 0.72rem; }
+    .nav-tabs { flex-wrap: nowrap; overflow-x: auto; }
+}
 .nav-tabs .nav-link:not(.active):hover {
     background: rgba(43,158,179,0.10);
     color: var(--color-teal);
@@ -645,6 +710,62 @@ h3, h4, h5, .text-center.my-4 {
     color: #fff !important;
     border-color: var(--color-primary) !important;
     box-shadow: 0 -3px 0 var(--color-teal) inset;
+}
+
+/* ── Cards de prévia de visualização (SIH/SIM) ───────────────────────────── */
+.sihsim-preview-btn {
+    display: block;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.10);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+    user-select: none;
+}
+.sihsim-preview-btn:hover {
+    border-color: rgba(255, 255, 255, 0.70);
+    background: rgba(255, 255, 255, 0.18);
+}
+.sihsim-preview-btn--active {
+    border-color: #fff;
+    background: #fff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+.sihsim-preview-btn--active:hover {
+    background: #f0f8ff;
+}
+
+/* Imagem de prévia — ocupa toda a largura, altura fixa */
+.sihsim-preview-img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.25);
+}
+.sihsim-preview-btn--active .sihsim-preview-img {
+    border-bottom-color: #dde8f0;
+}
+
+/* Label abaixo da imagem */
+.sihsim-preview-label {
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.sihsim-preview-btn--active .sihsim-preview-label {
+    color: #1761a0;
+}
+
+@media (max-width: 576px) {
+    .sihsim-preview-img { height: 90px; }
+    .sihsim-preview-label { font-size: 0.85rem; padding: 8px 12px; }
 }
 
 /* ── Banner de seção antes das abas ──────────────────────────────────────── */
@@ -689,6 +810,47 @@ h3, h4, h5, .text-center.my-4 {
     .kpi-value { font-size: 0.95rem; }
     .sihsim-section-banner { font-size: 0.85rem; padding: 0.5rem 0.75rem; }
     h3, h4, h5 { font-size: 0.8rem !important; }
+}
+
+/* ── filter_bar (controls.py): empilha verticalmente em mobile ───────────── */
+@media (max-width: 575px) {
+    .filter-bar-wrap { flex-direction: column !important; }
+    .filter-bar-wrap > * { min-width: 100% !important; }
+}
+
+/* ── Dropdowns Dash: largura mínima responsiva ───────────────────────────── */
+.Select-control { min-height: 40px !important; }
+@media (max-width: 767px) {
+    .Select-control { min-height: 44px !important; }
+    /* Dropdown dentro de filter_bar: ocupa 100% */
+    .filter-bar-wrap .dash-dropdown { width: 100% !important; }
+}
+
+/* ── chart-card: margem inferior menor em mobile ────────────────────────── */
+@media (max-width: 767px) {
+    .chart-card.mb-4 { margin-bottom: 1rem !important; }
+}
+
+/* ── Gráficos Plotly: altura mínima com clamp ───────────────────────────── */
+.js-plotly-plot { min-height: clamp(180px, 28vw, 420px); }
+
+/* ── Página Ondas de Calor ───────────────────────────────────────────────── */
+
+/* Gráfico de bolhas histórico: altura mínima */
+#grafico-bolhas-oc .js-plotly-plot {
+    min-height: 380px;
+}
+
+@media (max-width: 767px) {
+    /* Gráfico de bolhas: modebar menor em mobile */
+    #grafico-bolhas-oc .js-plotly-plot .modebar {
+        transform: scale(0.75);
+        transform-origin: top right;
+    }
+}
+
+@media (max-width: 480px) {
+    #grafico-bolhas-oc .js-plotly-plot { min-height: 320px; }
 }
 
 /* ── Impressão / Baixar PDF ──────────────────────────────────────────────── */
