@@ -354,5 +354,5 @@ contato.register_callbacks_contato(app)
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8051))
+    port = int(os.environ.get("PORT", 8050))
     app.run(host="127.0.0.1", port=port, debug=True)
