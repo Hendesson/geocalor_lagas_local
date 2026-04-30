@@ -146,7 +146,7 @@ def layout_correlacao(app):
         dbc.Row([
             dbc.Col([
                 html.Img(src=app.get_asset_url("geocalor.png"), className="logo-img"),
-                html.H2("Risco relativo por defasagem — OC × internações/óbitos",
+                html.H2("Internações associadas a ondas de calor",
                         className="text-center my-4"),
             ], width=12),
         ], className="text-center"),
@@ -193,7 +193,7 @@ def layout_correlacao(app):
             chart_card("Risco Relativo por Defasagem (IC 95%)", [
                 dcc.Graph(
                     id="corr-rr-graph",
-                    style={"height": "420px"},
+                    style={"height": "clamp(300px, 55vw, 460px)"},
                     config={"displayModeBar": False},
                 ),
                 html.Div(id="corr-rr-note"),
@@ -317,7 +317,7 @@ def register_callbacks_correlacao(app):
                     dcc.Graph(
                         id=graph_id,
                         figure=fig,
-                        style={"height": "300px"},
+                        style={"height": "clamp(240px, 46vw, 320px)"},
                         config={"displayModeBar": False},
                     ),
                     html.Div([

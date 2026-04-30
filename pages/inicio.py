@@ -7,11 +7,11 @@ import dash_bootstrap_components as dbc
 from components import info_card
 
 
-def logo_apoiador(app, img, href, height="60px"):
+def logo_apoiador(app, img, href, height="90px"):
     return html.A(
         html.Img(
             src=app.get_asset_url(img),
-            style={"height": height, "width": "auto", "maxWidth": "140px"},
+            style={"height": height, "width": "auto", "maxWidth": "200px"},
             className="img-fluid apoiador-logo"
         ),
         href=href,
@@ -74,6 +74,10 @@ _ACEITOS = [
     "Revista Estrabão, 2026: Bezerra, AB, Gurgel, H, Santana, EA, Silva, EL, Lofrano-Porto, B. "
     "Ondas de calor e internações por doenças respiratórias na Região Integrada de Desenvolvimento "
     "do Distrito Federal e Entorno.",
+
+    "Revista Estrabão, 2026: Lofrano-Porto, B. Gurgel, H., Oliveira, LF., Pereira, HA., Bezerra, AB. "
+    "Ondas de calor e mortalidade por doenças respiratórias na RIDE/DF: evidências de associação e "
+    "implicações para a vigilância em saúde.",
 ]
 
 
@@ -201,7 +205,7 @@ def layout_inicio(app):
                             style={"color": "#212529", "fontWeight": "700"},
                         ),
                     ], className="mb-1"),
-                    html.P("Coordenação: Helen Gurgel", className="mb-0 text-muted"),
+                    
                 ]),
                 fa_icon="fas fa-project-diagram",
             ),

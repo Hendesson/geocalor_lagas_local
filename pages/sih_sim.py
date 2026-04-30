@@ -84,6 +84,61 @@ def layout_sih_sim(app) -> dbc.Container:
                 width=12,
             )),
 
+            # ── Banner com seletores de visualização ──────────────────────
+            html.Div(
+                [
+                    html.Div(
+                        [html.I(className="fas fa-chart-bar me-2"),
+                         "Explorar dados — escolha uma visualização:"],
+                        className="fw-bold mb-3",
+                        style={"fontSize": "1.05rem"},
+                    ),
+                    dbc.Row([
+                        dbc.Col(
+                            html.Div(
+                                [
+                                    html.Img(
+                                        src="/assets/infograficos.png",
+                                        className="sihsim-preview-img",
+                                    ),
+                                    html.Div(
+                                        [html.I(className="fas fa-chart-bar me-2"),
+                                         "Infográficos"],
+                                        className="sihsim-preview-label",
+                                    ),
+                                ],
+                                id="btn-sihsim-info",
+                                n_clicks=0,
+                                className="sihsim-preview-btn sihsim-preview-btn--active",
+                            ),
+                            xs=12, sm=6, className="mb-2 mb-sm-0",
+                        ),
+                        dbc.Col(
+                            html.Div(
+                                [
+                                    html.Img(
+                                        src="/assets/mapas.png",
+                                        className="sihsim-preview-img",
+                                    ),
+                                    html.Div(
+                                        [html.I(className="fas fa-map me-2"),
+                                         "Mapa Coroplético"],
+                                        className="sihsim-preview-label",
+                                    ),
+                                ],
+                                id="btn-sihsim-mapa",
+                                n_clicks=0,
+                                className="sihsim-preview-btn",
+                            ),
+                            xs=12, sm=6,
+                        ),
+                    ], className="g-3"),
+                ],
+                className="sihsim-section-banner mb-3",
+            ),
+
+            dcc.Store(id="sihsim-active-tab", data="info"),
+
             # ── Filtros ───────────────────────────────────────────────────
             dbc.Card(
                 [
@@ -103,40 +158,16 @@ def layout_sih_sim(app) -> dbc.Container:
                                            _rm_init, label="Região Metropolitana"), xs=12, md=4),
                             ],
                             className="g-3",
-                        )
+                        ),
+                        style={"overflow": "visible"},
                     ),
                 ],
                 className="shadow-sm border-0 mb-4",
+                style={"overflow": "visible"},
             ),
 
-            # ── Abas ─────────────────────────────────────────────────────
-            html.Div(
-                [
-                    html.I(className="fas fa-chart-bar me-2"),
-                    "Explorar dados — escolha uma visualização abaixo",
-                ],
-                className="sihsim-section-banner mb-0",
-            ),
-            dbc.Tabs(
-                [
-                    dbc.Tab(
-                        _tab_infograficos(),
-                        label="Infográficos",
-                        label_style={"fontWeight": "700"},
-                        tab_id="sihsim-tab-info",
-                    ),
-                    dbc.Tab(
-                        _tab_mapa(_anos_opts, _ano_init),
-                        label="Mapa Coroplético",
-                        label_style={"fontWeight": "700"},
-                        tab_id="sihsim-tab-mapa",
-                    ),
-                ],
-                id="sihsim-tabs",
-                active_tab="sihsim-tab-info",
-                className="mb-4",
-                style={"borderTop": "3px solid #1761a0"},
-            ),
+            # ── Conteúdo dinâmico da visualização selecionada ─────────────
+            html.Div(id="sihsim-tab-content"),
 
             # ── Nota Técnica ──────────────────────────────────────────────
             dbc.Card(
@@ -184,7 +215,7 @@ def layout_sih_sim(app) -> dbc.Container:
 def _tab_infograficos() -> dbc.Container:
     return dbc.Container(
         [
-            # Linha 1: específico 1 | específico 2 | raça/cor
+            # 1-2-3: Caráter de internação | Especialidade do leito | Raça/cor
             dbc.Row(
                 [
                     dbc.Col(_dyn_card("sihsim-g1-title", "sihsim-g1", "fas fa-hospital",
@@ -204,14 +235,46 @@ def _tab_infograficos() -> dbc.Container:
                 className="align-items-stretch",
             ),
 
-            # Linha 2a: série temporal facetada por ano
+            # 4-5: Pirâmide etária por sexo | Distribuição por faixa etária
+            dbc.Row(
+                [
+                    dbc.Col(chart_card("Pirâmide etária por sexo",
+                                       [dcc.Loading(dcc.Graph(id="sihsim-g6"), type="circle"),
+                                        _nota("Proporção de casos por faixa etária e sexo em relação "
+                                              "ao total geral. Masculino à esquerda, Feminino à direita."),
+                                        dl_btn("sihsim-g6", "piramide_etaria_sexo")],
+                                       fa_icon="fas fa-venus-mars"),
+                            xs=12, md=6, className="mb-3"),
+                    dbc.Col(chart_card("Distribuição por faixa etária",
+                                       [dcc.Loading(dcc.Graph(id="sihsim-g7"), type="circle"),
+                                        _nota("Distribuição proporcional por faixa etária. "
+                                              "Identifica os grupos mais afetados pelas doenças "
+                                              "cardiovasculares e respiratórias na população da RM."),
+                                        dl_btn("sihsim-g7", "distribuicao_faixa_etaria")],
+                                       fa_icon="fas fa-baby"),
+                            xs=12, md=6, className="mb-3"),
+                ],
+                className="align-items-stretch",
+            ),
+
+            # 6: Taxa anual por 1.000 hab.
+            dbc.Row(dbc.Col(
+                chart_card("Taxa anual por 1.000 hab.",
+                           [dcc.Loading(dcc.Graph(id="sihsim-g5"), type="circle"),
+                            _nota("Taxa anual ajustada pela população da RM. "
+                                  "Permite comparar RMs de tamanhos diferentes e "
+                                  "identificar tendências independente do crescimento "
+                                  "populacional."),
+                            dl_btn("sihsim-g5", "taxa_anual")],
+                           fa_icon="fas fa-chart-bar"),
+                width=12, className="mb-3",
+            )),
+
+            # 7: Série temporal mensal por ano
             dbc.Row(dbc.Col(
                 chart_card(
                     "Série temporal mensal por ano",
-                    [dcc.Loading(
-                        dcc.Graph(id="sihsim-g4b"),
-                        type="circle",
-                    ),
+                    [dcc.Loading(dcc.Graph(id="sihsim-g4b"), type="circle"),
                      _nota("Número absoluto de casos por mês — cada painel corresponde a um ano. "
                            "Linhas tracejadas: limiares de risco calculados por quintis do volume mensal "
                            "(sem risco → segurança → baixo → moderado → alto)."),
@@ -221,32 +284,11 @@ def _tab_infograficos() -> dbc.Container:
                 width=12, className="mb-3",
             )),
 
-            # Linha 2b: mapa de calor temporal (ano × mês)
-            dbc.Row(dbc.Col(
-                chart_card(
-                    "Sazonalidade mensal — mapa de calor (ano × mês)",
-                    [dcc.Loading(
-                        dcc.Graph(id="sihsim-g4", style={"height": "400px"}),
-                        type="circle",
-                    ),
-                     _nota("Contagem absoluta de internações/óbitos por mês e ano. "
-                           "Cores mais escuras = maior volume. Identifica sazonalidade "
-                           "(ex.: picos respiratórios no inverno) e tendências de longo prazo. "
-                           "Valores são contagens brutas, não taxas populacionais."),
-                     dl_btn("sihsim-g4", "sazonalidade_mensal")],
-                    fa_icon="fas fa-th",
-                ),
-                width=12, className="mb-3",
-            )),
-
-            # Linha 2c: taxa mensal por ano (facetada)
+            # 8: Taxa mensal por ano (por 10.000 hab.)
             dbc.Row(dbc.Col(
                 chart_card(
                     "Taxa mensal por ano (por 10.000 hab.)",
-                    [dcc.Loading(
-                        dcc.Graph(id="sihsim-g4c"),
-                        type="circle",
-                    ),
+                    [dcc.Loading(dcc.Graph(id="sihsim-g4c"), type="circle"),
                      _nota("Taxa mensal por 10.000 habitantes — barras cinzas, cada painel "
                            "corresponde a um ano (3 colunas por linha). "
                            "Eixo X: mês; eixo Y: taxa por 10.000 hab."),
@@ -256,38 +298,21 @@ def _tab_infograficos() -> dbc.Container:
                 width=12, className="mb-3",
             )),
 
-            # Linha 3: taxa anual | contagem por sexo
-            dbc.Row(
-                [
-                    dbc.Col(chart_card("Taxa anual por 1.000 hab.",
-                                       [dcc.Loading(dcc.Graph(id="sihsim-g5"), type="circle"),
-                                        _nota("Taxa anual ajustada pela população da RM. "
-                                              "Permite comparar RMs de tamanhos diferentes e "
-                                              "identificar tendências independente do crescimento "
-                                              "populacional."),
-                                        dl_btn("sihsim-g5", "taxa_anual")],
-                                       fa_icon="fas fa-chart-bar"),
-                            xs=12, md=6, className="mb-3"),
-                    dbc.Col(chart_card("Pirâmide etária por sexo",
-                                       [dcc.Loading(dcc.Graph(id="sihsim-g6"), type="circle"),
-                                        _nota("Proporção de casos por faixa etária e sexo em relação "
-                                              "ao total geral. Masculino à esquerda, Feminino à direita."),
-                                        dl_btn("sihsim-g6", "piramide_etaria_sexo")],
-                                       fa_icon="fas fa-venus-mars"),
-                            xs=12, md=6, className="mb-3"),
-                ],
-                className="align-items-stretch",
-            ),
-
-            # Linha 4: faixa etária
+            # 9: Sazonalidade mensal — mapa de calor (ano × mês)
             dbc.Row(dbc.Col(
-                chart_card("Distribuição por faixa etária",
-                           [dcc.Loading(dcc.Graph(id="sihsim-g7"), type="circle"),
-                            _nota("Distribuição proporcional por faixa etária. "
-                                  "Identifica os grupos mais afetados pelas doenças "
-                                  "cardiovasculares e respiratórias na população da RM."),
-                            dl_btn("sihsim-g7", "distribuicao_faixa_etaria")],
-                           fa_icon="fas fa-baby"),
+                chart_card(
+                    "Sazonalidade mensal — mapa de calor (ano × mês)",
+                    [dcc.Loading(
+                        dcc.Graph(id="sihsim-g4", style={"height": "clamp(280px, 52vw, 440px)"}),
+                        type="circle",
+                    ),
+                     _nota("Contagem absoluta de internações/óbitos por mês e ano. "
+                           "Cores mais escuras = maior volume. Identifica sazonalidade "
+                           "(ex.: picos respiratórios no inverno) e tendências de longo prazo. "
+                           "Valores são contagens brutas, não taxas populacionais."),
+                     dl_btn("sihsim-g4", "sazonalidade_mensal")],
+                    fa_icon="fas fa-th",
+                ),
                 width=12, className="mb-3",
             )),
         ],
@@ -399,6 +424,51 @@ def _tab_mapa(anos_opts: list, ano_init) -> dbc.Container:
 # ── callbacks ───────────────────────────────────────────────────────────────
 
 def register_callbacks_sih_sim(app) -> None:
+
+    # ── Toggle botões de visualização (client-side) ───────────────────────
+    app.clientside_callback(
+        """
+        function(n_info, n_mapa, atual) {
+            var ctx = window.dash_clientside.callback_context;
+            if (!ctx || !ctx.triggered || !ctx.triggered.length)
+                return window.dash_clientside.no_update;
+            var tid = ctx.triggered[0].prop_id.split('.')[0];
+            var aba = (tid === 'btn-sihsim-mapa') ? 'mapa' : 'info';
+            var base = 'sihsim-preview-btn';
+            var active = base + ' sihsim-preview-btn--active';
+            return [
+                aba,
+                aba === 'info'  ? active : base,
+                aba === 'mapa'  ? active : base,
+            ];
+        }
+        """,
+        Output("sihsim-active-tab",  "data"),
+        Output("btn-sihsim-info",    "className"),
+        Output("btn-sihsim-mapa",    "className"),
+        Input("btn-sihsim-info",     "n_clicks"),
+        Input("btn-sihsim-mapa",     "n_clicks"),
+        State("sihsim-active-tab",   "data"),
+        prevent_initial_call=True,
+    )
+
+    # ── Renderiza conteúdo da aba selecionada ─────────────────────────────
+    @app.callback(
+        Output("sihsim-tab-content", "children"),
+        Input("sihsim-active-tab",   "data"),
+        State("sihsim-sistema",      "value"),
+        State("sihsim-causa",        "value"),
+        State("sihsim-rm",           "value"),
+    )
+    def _render_tab(active_tab, sistema, causa, rm):
+        if active_tab == "mapa":
+            s = sistema or _SISTEMA_DEFAULT
+            c = causa   or _CAUSA_DEFAULT
+            anos  = ds.anos_disponiveis(s, c, rm) if rm else []
+            opts  = [{"label": str(a), "value": a} for a in anos]
+            init  = anos[-1] if anos else None
+            return _tab_mapa(opts, init)
+        return _tab_infograficos()
 
     @app.callback(
         Output("sihsim-rm", "options"),
@@ -1052,7 +1122,7 @@ def register_callbacks_sih_sim(app) -> None:
                         html.H6(str(a), className="text-center text-primary fw-bold mb-1"),
                         dcc.Graph(
                             figure=fig,
-                            style={"height": "420px"},
+                            style={"height": "clamp(300px, 55vw, 460px)"},
                             config={**_cfg, "toImageButtonOptions": {"filename": f"mapa_{rm}_{a}"}},
                         ),
                     ], xs=12, md=6, className="mb-4")

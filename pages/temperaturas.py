@@ -60,13 +60,15 @@ def build_mapa_estacoes(df: pd.DataFrame) -> str:
             ),
         ).add_to(m)
 
-    # Marcadores das estações
-    if not df.empty and "Lat" in df.columns:
-        meta = df.drop_duplicates("cidade").dropna(subset=["Lat", "Long"])
+    # Marcadores das estações — suporta variações de nome de coluna lat/lon
+    lat_col = next((c for c in ["Lat", "Latitude", "lat", "latitude"] if c in df.columns), None)
+    lon_col = next((c for c in ["Long", "Longitude", "lon", "longitude"] if c in df.columns), None)
+    if not df.empty and lat_col and lon_col:
+        meta = df.drop_duplicates("cidade").dropna(subset=[lat_col, lon_col])
         stats = df.groupby("cidade")["year"].agg(y_min="min", y_max="max", n_reg="count").to_dict("index")
         for _, row in meta.iterrows():
             cidade = str(row["cidade"])
-            lat, lon = float(row["Lat"]), float(row["Long"])
+            lat, lon = float(row[lat_col]), float(row[lon_col])
             s = stats.get(cidade, {})
             folium.Marker(
                 location=[lat, lon],
@@ -181,7 +183,7 @@ def layout_temperaturas(app, df, cidades, anos):
                         ),
                         html.Iframe(
                             src="/mapa-estacoes",
-                            style={"width": "100%", "height": "400px",
+                            style={"width": "100%", "height": "clamp(240px, 52vw, 420px)",
                                    "border": "none", "borderRadius": "8px"},
                         ),
                     ],

@@ -49,7 +49,7 @@ TEAM_MEMBERS = [
         "lattes": "http://lattes.cnpq.br/5691395606608035"
     },
     {
-        "name": "Bruno Lofrano Porto",
+        "name": "Bruno Lofrano-Porto",
         "role": "PESQUISADORES COLABORADORES",
         "institution": "Pesquisador Colaborador UnB/LAGAS",
         "areas": "Geoprocessamento, Climatologia, Ondas de Calor, Atividade Física",
@@ -278,7 +278,7 @@ def layout_contato(app):
                                         )
                                     )
                                 ],
-                                style={"width": "100%", "height": "320px"},
+                                style={"width": "100%", "height": "clamp(200px, 46vw, 340px)"},
                                 center=[-15.761342, -47.870362],
                                 zoom=16,
                                 className="mapa-contato")
@@ -302,9 +302,9 @@ def layout_contato(app):
                         html.Div([
                             html.P(
                                 [
-                                    "HENDESSON ALVES; PORTO, B. L.; GURGEL, H. C.; "
-                                    "BEZERRA, A. B.; SILVA, E. L. E.; OLIVEIRA, L. F.; "
-                                    "LEAL, C. M.; CIPRIANO, R. O.; SÁ, I. A. A. ",
+                                    "Pereira, HA, Lofrano-Porto, B, Gurgel, H, "
+                                    "Bezerra, AB, Silva, EL, Oliveira, LF, Leal, C. M., "
+                                    "Cipriano, R. O. Sá, IAA. ",
                                     html.Strong("Dashboard de Ondas de Calor e Saúde."),
                                     " Laboratório de Geografia, Ambiente e Saúde (LAGAS), "
                                     "Universidade de Brasília, Brasília, DF.",

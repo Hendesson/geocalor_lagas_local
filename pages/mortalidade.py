@@ -396,7 +396,7 @@ def layout_mortalidade(app):
             chart_card("Razão Observado/Esperado (O/E) por Onda de Calor", [
                 dcc.Graph(
                     id="mort-oer-graph",
-                    style={"height": "440px"},
+                    style={"height": "clamp(300px, 55vw, 480px)"},
                     config={"displayModeBar": False},
                 ),
                 html.Div(id="mort-oer-note"),
@@ -438,7 +438,7 @@ def layout_mortalidade(app):
         chart_card("Fatores de risco para excesso de mortalidade em ondas de calor", [
             dcc.Graph(
                 id="mort-fatores-graph",
-                style={"height": "340px"},
+                style={"height": "clamp(260px, 50vw, 380px)"},
                 config={"displayModeBar": False},
             ),
             chart_note(
@@ -539,7 +539,7 @@ def register_callbacks_mortalidade(app):
                     dcc.Graph(
                         id=graph_id,
                         figure=fig,
-                        style={"height": "300px"},
+                        style={"height": "clamp(240px, 46vw, 320px)"},
                         config={"displayModeBar": False},
                     ),
                     html.Div(dl_btn(graph_id, f"oer_{i}"), className="mt-1"),

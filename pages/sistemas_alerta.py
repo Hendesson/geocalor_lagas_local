@@ -2,7 +2,6 @@
 Sistemas de alerta — página Dash (mesmo padrão de temperaturas/ondas).
 Mapa: dash-leaflet + GeoJSON em assets; carrossel e figuras via callbacks/layout Python.
 """
-import copy
 import inspect
 import json
 import os
@@ -108,6 +107,9 @@ _ns = Namespace("dashExtensions", "default")
 _ALERTA_STYLE           = _ns("function0")
 _ALERTA_ON_EACH_FEATURE = _ns("function1")
 
+# Parâmetros da assinatura de dl.GeoJSON inspecionados uma única vez no import
+_DL_GEOJSON_PARAMS = inspect.signature(dl.GeoJSON).parameters
+
 
 def chart_note(texto: str) -> html.P:
     return html.P(texto, className="chart-note text-muted small mt-2")
@@ -118,7 +120,7 @@ def _p(text: str, className: str = "text-muted", **kwargs) -> html.P:
 
 
 def _geojson_paises(geo_url: str) -> dl.GeoJSON:
-    par = inspect.signature(dl.GeoJSON).parameters
+    par = _DL_GEOJSON_PARAMS
     kw = {"id": "alerta-paises-geojson", "style": _ALERTA_STYLE}
     if "url" in par:
         kw["url"] = geo_url
@@ -186,7 +188,7 @@ def _texto(children) -> html.Div:
 # ── Funções de figura Plotly ─────────────────────────────────────────────────
 
 def _base_layout(title: str = "", **kw) -> dict:
-    lo = copy.deepcopy(LAYOUT_BASE)
+    lo = {**LAYOUT_BASE}
     lo.update(dict(
         title=dict(
             text=title,

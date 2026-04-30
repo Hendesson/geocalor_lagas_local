@@ -1,6 +1,7 @@
 """
 Análise de ondas de calor — ex-dashboard-ondas-calor.
 """
+import logging
 import dash
 from dash import dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
@@ -11,6 +12,9 @@ import calendar
 from datetime import date
 
 from components import chart_card, info_card, dd, dl_btn
+from config import LAYOUT_BASE, WHITE
+
+logger = logging.getLogger(__name__)
 
 
 def chart_note(texto: str) -> html.P:
@@ -57,73 +61,50 @@ def nota_tecnica_card() -> dbc.Card:
 
 
 def layout_ondas(app, df, cidades, anos):
+    cidade_opts   = [{"label": c, "value": c} for c in cidades]
+    cidade_default = "Brasília" if "Brasília" in cidades else (cidades[0] if cidades else None)
+    anos_opts     = [{"label": str(a), "value": a} for a in anos if a <= 2023]
+    ano_default   = min(anos[-1], 2023) if anos else None
+
     return dbc.Container([
-        dbc.Row([
-            dbc.Col([
-                html.Img(src=app.get_asset_url('geocalor.png'), className="logo-img"),
-                html.H2("Análise de ondas de calor", className="text-center my-4")
-            ], width=12)
-        ], className="text-center"),
+        # ── Cabeçalho ─────────────────────────────────────────────────────────
+        dbc.Row(dbc.Col([
+            html.Img(src=app.get_asset_url('geocalor.png'), className="logo-img"),
+            html.H2("Análise de ondas de calor", className="text-center my-4"),
+        ], width=12), className="text-center"),
 
-        html.Br(),
-
-        dbc.Row([
-            dbc.Col(
-                info_card(
-                    "",
-                    html.P(
-                        "A caracterização do comportamento das ondas de calor preconizou a "
-                        "identificação dos eventos, do período do ano que os eventos mais acontecem "
-                        "e da intensidade.",
-                        className="mb-0 text-muted",
-                    ),
-                    fa_icon="fas fa-fire",
+        # ── Info ──────────────────────────────────────────────────────────────
+        dbc.Row(dbc.Col(
+            info_card(
+                "",
+                html.P(
+                    "A caracterização do comportamento das ondas de calor preconizou a "
+                    "identificação dos eventos, do período do ano que os eventos mais acontecem "
+                    "e da intensidade.",
+                    className="mb-0 text-muted",
                 ),
-                width=12,
+                fa_icon="fas fa-fire",
             ),
-        ]),
+            width=12,
+        )),
 
+        # ── Dois gráficos polares lado a lado ─────────────────────────────────
         dbc.Row([
-            dbc.Col([
-                chart_card(
-                    "Dias de OC por Mês — Período Completo",
-                    [
-                        dd("cidade-hw-total",
-                           [{"label": c, "value": c} for c in cidades],
-                           "Brasília" if "Brasília" in cidades else (cidades[0] if cidades else None),
-                           label="Cidade"),
-                        dcc.Loading(dcc.Graph(id="grafico-polar-total"), type="circle"),
-                        chart_note(
-                            "Frequência mensal acumulada de dias de Ondas de Calor "
-                            "ao longo de todo o período histórico. Cada eixo representa "
-                            "um mês; o valor indica o total de dias de OC registrados."
-                        ),
-                        dl_btn("grafico-polar-total", "polar_oc_periodo_completo"),
-                    ],
-                    fa_icon="fas fa-chart-pie",
-                ),
-            ], xs=12, md=6),
-
-            dbc.Col([
+            # Esquerda (principal): Ano Selecionado — controla cidade e ano de toda a página
+            dbc.Col(
                 chart_card(
                     "Dias de OC por Mês — Ano Selecionado",
                     [
                         dbc.Row([
                             dbc.Col(
-                                dd("cidade-hw",
-                                   [{"label": c, "value": c} for c in cidades],
-                                   "Brasília" if "Brasília" in cidades else (cidades[0] if cidades else None),
-                                   label="Cidade"),
+                                dd("cidade-hw", cidade_opts, cidade_default, label="Cidade"),
                                 xs=12, sm=6,
                             ),
                             dbc.Col(
-                                dd("ano-hw",
-                                   [{"label": str(a), "value": a} for a in anos if a <= 2023],
-                                   min(anos[-1], 2023) if anos else None,
-                                   label="Ano"),
+                                dd("ano-hw", anos_opts, ano_default, label="Ano"),
                                 xs=12, sm=6,
                             ),
-                        ]),
+                        ], className="g-2 mb-2"),
                         dcc.Loading(dcc.Graph(id="grafico-polar"), type="circle"),
                         chart_note(
                             "Distribuição mensal das Ondas de Calor para o ano e cidade "
@@ -133,20 +114,53 @@ def layout_ondas(app, df, cidades, anos):
                     ],
                     fa_icon="fas fa-calendar-alt",
                 ),
-            ], xs=12, md=6),
+                xs=12, md=6,
+            ),
+            # Direita: Período Completo — segue a cidade selecionada à esquerda
+            dbc.Col(
+                chart_card(
+                    "Dias de OC por Mês — Período Completo",
+                    [
+                        dcc.Loading(dcc.Graph(id="grafico-polar-total"), type="circle"),
+                        chart_note(
+                            "Frequência mensal acumulada de dias de Ondas de Calor "
+                            "ao longo de todo o período histórico (1981–2023). "
+                            "Acompanha a cidade selecionada ao lado."
+                        ),
+                        dl_btn("grafico-polar-total", "polar_oc_periodo_completo"),
+                    ],
+                    fa_icon="fas fa-chart-pie",
+                ),
+                xs=12, md=6,
+            ),
         ]),
 
         html.Br(),
-        dbc.Row([
-            dbc.Col([
-                dbc.Button(
-                    [html.I(className="fas fa-calendar-alt me-2"),
-                     "Mostrar / Ocultar Calendário de Ondas de Calor"],
-                    id="btn-calendario", color="primary", className="mb-3"
+        dbc.Row(dbc.Col([
+            dbc.Button(
+                [html.I(className="fas fa-calendar-alt me-2"),
+                 "Mostrar / Ocultar Calendário de Ondas de Calor"],
+                id="btn-calendario", color="primary", className="mb-3",
+            ),
+            html.Div(id="calendar-container", style={"display": "none"}),
+        ], width=12)),
+
+        html.Br(),
+
+        chart_card(
+            "Ondas de Calor Históricas",
+            [
+                dcc.Loading(dcc.Graph(id="grafico-bolhas-oc"), type="circle"),
+                chart_note(
+                    "Cada bolha representa um evento de Onda de Calor. "
+                    "Eixo X: ano; Eixo Y: período do ano em que o evento iniciou. "
+                    "Tamanho da bolha = duração em dias; Cor = temperatura máxima registrada. "
+                    "A área cinza indica o período de referência climatológica (1981–2010)."
                 ),
-                html.Div(id="calendar-container", style={"display": "none"})
-            ], width=12)
-        ]),
+                dl_btn("grafico-bolhas-oc", "oc_historicas"),
+            ],
+            fa_icon="fas fa-circle",
+        ),
 
         html.Br(),
 
@@ -325,21 +339,7 @@ def layout_ondas(app, df, cidades, anos):
 
         html.Hr(className="my-5"),
 
-        dbc.Row([
-            dbc.Col(
-                info_card(
-                    "",
-                    html.P(
-                        "A caracterização do comportamento das ondas de calor preconizou a "
-                        "identificação dos eventos, do período do ano que os eventos mais acontecem "
-                        "e da intensidade.",
-                        className="mb-0 text-muted",
-                    ),
-                    fa_icon="fas fa-fire",
-                ),
-                width=12,
-            ),
-        ]),
+
 
         dbc.Row([
             dbc.Col(
@@ -382,51 +382,6 @@ def layout_ondas(app, df, cidades, anos):
                 ),
             ]),
         ], className="mb-4 shadow-sm border-0"),
-
-        dbc.Row([
-            dbc.Col(
-                info_card(
-                    "",
-                    html.P(
-                        "Como poucos eventos são classificados como severos e extremos, "
-                        "nós consideramos a soma dessas duas classificações como as ondas de calor "
-                        "de maior intensidade. O mapa abaixo apresenta o comportamento apenas desses "
-                        "eventos mais intensos, assim você pode comparar com o mapa acima.",
-                        className="mb-0 text-muted",
-                    ),
-                    fa_icon="fas fa-map-marked-alt",
-                ),
-                width=12,
-            ),
-        ]),
-
-        dbc.Card([
-            html.Div(
-                [
-                    html.I(className="fas fa-map-marked-alt me-2"),
-                    "Mapa interativo das ondas de calor de maior intensidade",
-                ],
-                className="geo-map-section-header",
-            ),
-            dbc.CardBody([
-                html.P(
-                    "Visualização geoespacial das ondas de calor de maior intensidade "
-                    "(severas e extremas) nas Regiões Metropolitanas analisadas. Use os "
-                    "controles do mapa para explorar diferentes regiões e períodos.",
-                    className="text-muted small mb-3",
-                ),
-                html.A(
-                    [html.I(className="fas fa-print me-1"), "Abrir para imprimir / captura de tela"],
-                    href="/mapa-eventos-extremos",
-                    target="_blank",
-                    className="btn-download-asset mb-2",
-                ),
-                html.Iframe(
-                    src="/mapa-eventos-extremos",
-                    className="mapa-folium-iframe mapa-folium-iframe--tall",
-                ),
-            ]),
-        ], className="mb-5 shadow-sm border-0"),
 
         dbc.Row([dbc.Col(nota_tecnica_card(), width=12)]),
 
@@ -473,9 +428,9 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
             """Returns (color, label, abbr) for a given HWDay_Intensity value."""
             if pd.isna(intensity):
                 return "#e63946", "Severa", "S"
-            # Normaliza: minúsculas + sem espaços extras; mantém espaço para
-            # cobrir "low intensity" (formato real do dataset)
             key = str(intensity).strip().lower()
+            if key not in INTENSITY_COLOR:
+                logger.warning("Intensidade desconhecida no calendário: %r", intensity)
             color = INTENSITY_COLOR.get(key, "#e63946")
             label = INTENSITY_LABEL.get(key, str(intensity).strip())
             abbr  = INTENSITY_ABBR.get(key, "OC")
@@ -551,7 +506,9 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
                                 style={"minWidth": "200px"},
                             )
                             day_div = html.Div([btn, popup])
-                        except Exception:
+                        except Exception as e:
+                            logger.warning("Erro ao renderizar dia %d/%d/%d no calendário: %s",
+                                           day, mes, ano, e)
                             day_div = html.Div(str(day), className="calendar-day",
                                                style={"backgroundColor": "#e63946", "color": "white",
                                                       "borderRadius": "50%", "width": "40px",
@@ -611,13 +568,118 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
 
     @app.callback(
         Output("grafico-polar-total", "figure"),
-        Input("cidade-hw-total", "value")
+        Input("cidade-hw", "value"),
     )
-    def update_hw_total(cidade_total):
-        if not cidade_total or df.empty or data_processor is None:
+    def update_hw_total(cidade):
+        if not cidade or df.empty or data_processor is None:
             return visualizer.create_polar_plot(pd.DataFrame(), "", None)
-        df_polar = data_processor.calculate_hw_monthly_all_years(cidade_total)
-        return visualizer.create_polar_plot(df_polar, cidade_total, None)
+        df_polar = data_processor.calculate_hw_monthly_all_years(cidade)
+        return visualizer.create_polar_plot(df_polar, cidade, None)
+
+    @app.callback(
+        Output("grafico-bolhas-oc", "figure"),
+        Input("cidade-hw", "value"),
+    )
+    def update_bolhas_oc(cidade):
+        if df.empty or not cidade:
+            return go.Figure()
+
+        hw = df[(df["cidade"] == cidade) & (df["isHW"] == "TRUE")].copy()
+        if hw.empty or "group" not in hw.columns:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="Sem eventos de OC registrados para esta cidade.",
+                xref="paper", yref="paper", x=0.5, y=0.5,
+                showarrow=False, font=dict(size=13, color="#888"),
+            )
+            fig.update_layout(**{**LAYOUT_BASE, "height": 420},
+                              xaxis=dict(visible=False), yaxis=dict(visible=False))
+            return fig
+
+        hw["index"] = pd.to_datetime(hw["index"])
+
+        # Uma linha por evento: ano, data de início, duração e Tmax
+        events = (
+            hw.groupby("group")
+            .agg(
+                year   =("year",        "first"),
+                inicio =("index",       "min"),
+                duracao=("HW_duration", "first"),
+                tmax   =("tempMax",     "max"),
+            )
+            .reset_index(drop=True)
+        )
+        events["duracao"] = (
+            pd.to_numeric(events["duracao"], errors="coerce").fillna(3).clip(lower=2)
+        )
+        # Eixo Y: data fixa no ano 2000 para comparar todos os anos no mesmo eixo
+        events["data_no_ano"] = events["inicio"].apply(
+            lambda d: pd.Timestamp(2000, d.month, d.day)
+        )
+        events["inicio_str"] = events["inicio"].dt.strftime("%d/%m/%Y")
+
+        tick_vals = [pd.Timestamp(2000, m, 1) for m in range(1, 13)]
+        tick_text = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                     "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+        fig = px.scatter(
+            events,
+            x="year",
+            y="data_no_ano",
+            size="duracao",
+            color="tmax",
+            color_continuous_scale="YlOrRd",
+            custom_data=["inicio_str", "duracao", "tmax"],
+            size_max=55,
+        )
+        fig.update_traces(
+            hovertemplate=(
+                "<b>Início:</b> %{customdata[0]}<br>"
+                "<b>Duração:</b> %{customdata[1]:.0f} dias<br>"
+                "<b>Tmax:</b> %{customdata[2]:.1f} °C"
+                "<extra></extra>"
+            )
+        )
+
+        # Área de referência climatológica (1981–2010)
+        fig.add_vrect(
+            x0=1981, x1=2010,
+            fillcolor="slategray", opacity=0.15,
+            layer="below", line_width=0,
+            annotation_text="Período de<br>referência<br>(1981–2010)",
+            annotation_position="top left",
+            annotation_font=dict(size=9, color="#555"),
+        )
+
+        fig.update_layout(
+            **{
+                **LAYOUT_BASE,
+                "height": 520,
+                "margin": dict(l=60, r=90, t=50, b=60),
+            },
+            xaxis=dict(
+                title="Ano",
+                range=[1980.5, 2024.5],
+                dtick=5,
+                showgrid=True,
+                gridcolor="rgba(0,0,0,0.07)",
+                zeroline=False,
+            ),
+            yaxis=dict(
+                title="Data no ano",
+                tickvals=tick_vals,
+                ticktext=tick_text,
+                showgrid=True,
+                gridcolor="rgba(0,0,0,0.07)",
+            ),
+            coloraxis_colorbar=dict(
+                title="Tmax (°C)",
+                thickness=14,
+                len=0.65,
+            ),
+            showlegend=False,
+        )
+        return fig
 
     @app.callback(
         [Output("grafico-polar", "figure"),
@@ -739,7 +801,8 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
             fig.update_layout(title=title, xaxis_title="Ano", yaxis_title="Cidade",
                               height=500)
             return fig, is_dias, is_ev
-        except Exception:
+        except Exception as e:
+            logger.warning("Erro ao gerar heatmap de OC: %s", e)
             return go.Figure(), is_dias, is_ev
 
     _THUMB_STYLE = {
