@@ -12,6 +12,7 @@ def dd(
     label: str = "",
     multi: bool = False,
     min_width: str = "160px",
+    tooltip: str = "",
 ) -> html.Div:
     """Dropdown com rótulo opcional.
 
@@ -25,7 +26,8 @@ def dd(
     """
     items = []
     if label:
-        items.append(html.Label(label, className="small fw-semibold text-muted mb-1 d-block"))
+        label_props = {"title": tooltip} if tooltip else {}
+        items.append(html.Label(label, className="small fw-semibold text-muted mb-1 d-block", **label_props))
     items.append(
         dcc.Dropdown(
             id=id_,
@@ -50,10 +52,11 @@ def filter_bar(*controls) -> html.Div:
     """
     return html.Div(
         list(controls),
-        className="d-flex flex-wrap gap-3 align-items-end mb-4 p-3 rounded",
+        className="d-flex flex-wrap gap-3 align-items-end mb-4 p-3 rounded filter-bar-wrap",
         style={
-            "background": "rgba(234,246,251,0.7)",
-            "border": "1px solid #b3d6e6",
+            "background": "#fff",
+            "border": "1.5px solid #b3d6e6",
             "borderRadius": "10px",
+            "boxShadow": "0 1px 6px rgba(23,97,160,0.07)",
         },
     )
