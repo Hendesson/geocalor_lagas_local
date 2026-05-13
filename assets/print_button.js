@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
+    var HIDDEN_PATHS = ['/', '/inicio', '/contato'];
+
     var btn = document.createElement("button");
     btn.innerHTML = '<i class="fas fa-print" style="margin-right:8px"></i>Baixar PDF';
     btn.className = "btn btn-primary shadow print-hide";
@@ -9,4 +11,18 @@ document.addEventListener("DOMContentLoaded", function () {
     ].join(";");
     btn.onclick = function () { window.print(); };
     document.body.appendChild(btn);
+
+    function updateVisibility() {
+        var path = window.location.pathname.replace(/\/$/, '') || '/';
+        btn.style.display = HIDDEN_PATHS.indexOf(path) !== -1 ? 'none' : '';
+    }
+
+    updateVisibility();
+
+    var _push = history.pushState;
+    history.pushState = function () {
+        _push.apply(history, arguments);
+        updateVisibility();
+    };
+    window.addEventListener('popstate', updateVisibility);
 });
