@@ -123,7 +123,8 @@ def make_member_card(app, member: dict, card_class: str) -> html.Div:
         html.A(
             html.Img(src=app.get_asset_url('logo_lattes.png'),
                      style={"height": "32px", "width": "32px"},
-                     title="Lattes"),
+                     title="Lattes",
+                     ),
             href=member.get("lattes", "#"),
             target="_blank"
         )
@@ -137,7 +138,7 @@ def make_member_card(app, member: dict, card_class: str) -> html.Div:
             style={"width": img_size, "height": img_size,
                    "objectFit": "cover", "borderRadius": "50%",
                    "margin": "0 auto", "display": "block"},
-            className="mb-2"
+            className="mb-2",
         ),
         html.H5(member["name"], className="text-center mb-1",
                 style={"fontSize": "1rem" if is_center else "0.85rem"}),

@@ -12,7 +12,7 @@ def logo_apoiador(app, img, href, height="90px"):
         html.Img(
             src=app.get_asset_url(img),
             style={"height": height, "width": "auto", "maxWidth": "200px"},
-            className="img-fluid apoiador-logo"
+            className="img-fluid apoiador-logo",
         ),
         href=href,
         target="_blank",
@@ -84,27 +84,31 @@ _ACEITOS = [
 def _pub_card(app, pub):
     ref_text = html.P(pub["ref"], className="small text-muted mb-2")
     btn = html.A(
-        "Acessar",
+        [html.I(className="fas fa-external-link-alt me-1"), "Acessar"],
         href=pub["href"],
         target="_blank",
         className="btn btn-outline-primary btn-sm",
     )
     if pub["img"]:
-        img_el = html.A(
-            html.Img(
-                src=app.get_asset_url(pub["img"]),
-                style={"maxHeight": "160px", "maxWidth": "100%", "objectFit": "contain"},
-                className="img-fluid rounded shadow-sm mb-3",
+        img_col = dbc.Col(
+            html.A(
+                html.Img(
+                    src=app.get_asset_url(pub["img"]),
+                    style={"width": "100%", "height": "110px", "objectFit": "cover", "borderRadius": "8px"},
+                    className="img-fluid",
+                ),
+                href=pub["href"],
+                target="_blank",
             ),
-            href=pub["href"],
-            target="_blank",
+            xs=12, sm=4,
         )
-        body = html.Div([img_el, ref_text, btn])
+        text_col = dbc.Col([ref_text, btn], xs=12, sm=8)
+        body = dbc.Row([img_col, text_col], className="g-2 align-items-start")
     else:
         body = html.Div([ref_text, btn])
     return dbc.Col(
         dbc.Card(dbc.CardBody(body), className="h-100 shadow-sm"),
-        xs=12, sm=6, lg=3, className="mb-4"
+        xs=12, md=6, className="mb-4"
     )
 
 
@@ -148,81 +152,176 @@ def apoiadores_row(app):
     ])
 
 
+_SECOES = [
+    {
+        "id": "temperaturas",
+        "icon": "fas fa-thermometer-half",
+        "href": "/temperaturas",
+        "titulo": "Caracterização climática",
+        "desc": "Temperaturas médias, anomalias e sazonalidade nas 15 RMB de 1981 a 2023.",
+        "cor": "#1761a0",
+        "pos": "center center",
+    },
+    {
+        "id": "ondas",
+        "icon": "fas fa-fire",
+        "href": "/ondas",
+        "titulo": "Ondas de calor",
+        "desc": "Frequência, duração e intensidade dos eventos com mapas, gráficos e calendário interativo por cidade e ano.",
+        "cor": "#e63946",
+        "pos": "center center",
+    },
+    {
+        "id": "sih_sim",
+        "icon": "fas fa-hospital",
+        "href": "/sih-sim",
+        "titulo": "Perfil epidemiológico",
+        "desc": "Internações e óbitos por doenças cardiovasculares e respiratórias por região e ano, analise através de gráficos e mapas interativos.",
+        "cor": "#2b9eb3",
+        "pos": "center center",
+    },
+    {
+        "id": "mortalidade",
+        "icon": "fas fa-heartbeat",
+        "href": "/mortalidade",
+        "titulo": "Mortalidade × OC",
+        "desc": "Relação entre ondas de calor e mortalidade por doenças cardiovasculares e respiratórias.",
+        "cor": "#dc2f3d",
+        "pos": "center center",
+    },
+    {
+        "id": "correlacao",
+        "icon": "fas fa-chart-bar",
+        "href": "/correlacao",
+        "titulo": "Internação × OC",
+        "desc": "Associação estatística entre ondas de calor e internações hospitalares.",
+        "cor": "#6ec1a6",
+        "pos": "center center",
+    },
+    {
+        "id": "sistemas_alerta",
+        "icon": "fas fa-bell",
+        "href": "/sistemas-alerta",
+        "titulo": "Sistemas de alerta",
+        "desc": "Revisão e comparação de sistemas internacionais de alerta para ondas de calor.",
+        "cor": "#ff9f1c",
+        "pos": "center center",
+    },
+    {
+        "id": "contato",
+        "icon": "fas fa-users",
+        "href": "/contato",
+        "titulo": "Equipe e contato",
+        "desc": "Conheça a equipe do Projeto GeoCalor e entre em contato.",
+        "cor": "#1761a0",
+        "pos": "center center",
+        "size": "contain",
+    },
+]
+
+
+def _secoes_row():
+    cards = []
+    for s in _SECOES:
+        img_url = f"/assets/preview_{s['id']}.png"
+        cards.append(
+            dbc.Col(
+                html.A(
+                    html.Div([
+                        html.Div(
+                            className="secao-card-img",
+                            style={
+                                "backgroundImage": f"url('{img_url}')",
+                                "backgroundColor": "#deedf7",
+                                "backgroundPosition": s.get("pos", "center center"),
+                                "backgroundSize": s.get("size", "cover"),
+                                "backgroundRepeat": "no-repeat",
+                            },
+                        ),
+                        html.Div([
+                            html.P(s["titulo"],
+                                   className="fw-bold mb-1",
+                                   style={"color": "#1761a0", "fontSize": "0.9rem"}),
+                            html.P(s["desc"], className="text-muted small mb-0", style={"lineHeight": "1.4"}),
+                        ], className="secao-card-body"),
+                    ]),
+                    href=s["href"],
+                    className="nav-card-link",
+                ),
+                xs=12, sm=6, lg=3, className="mb-3"
+            )
+        )
+    return dbc.Row(cards, className="justify-content-center")
+
+
 def layout_inicio(app):
     return dbc.Container([
 
-        # ── Cabeçalho ────────────────────────────────────────────────────────
-        dbc.Row(dbc.Col([
-            html.Img(src=app.get_asset_url("geocalor.png"), className="logo-img"),
-            html.H2("Sobre o GeoCalor", className="text-center my-4"),
-        ], width=12), className="text-center mb-2"),
-
-        # ── Logos ────────────────────────────────────────────────────────────
-        dbc.Row(dbc.Col(
-            html.Div([
-                html.A(
-                    html.Img(
-                        src=app.get_asset_url("logo.png"),
-                        style={"height": "80px", "width": "auto"},
-                        className="img-fluid",
-                    ),
-                    href="http://www.lagas.unb.br",
-                    target="_blank",
-                ),
-                html.A(
-                    html.Img(
-                        src=app.get_asset_url("geocalor_nome.png"),
-                        style={"height": "60px", "width": "auto"},
-                        className="img-fluid",
-                    ),
-                    href="http://www.lagas.unb.br/index.php/produtos/geocalor",
-                    target="_blank",
-                ),
-            ], className="d-flex justify-content-center align-items-center gap-4"),
-            width=12,
-        ), className="mb-4"),
-
-        # ── Identificação do projeto ──────────────────────────────────────
-        dbc.Row(dbc.Col(
-            info_card(
-                "",
+        # ── Banner compacto ───────────────────────────────────────────────────
+        dbc.Row([
+            dbc.Col(
                 html.Div([
-                    html.P([
-                        html.Span(
-                            "Projeto GeoCalor",
-                            style={"color": "#6ec1a6", "fontWeight": "700", "fontSize": "1.15rem"},
-                        ),
-                    ], className="mb-1"),
-                    html.P(
-                        "Indicadores espaciais e sistema de alerta para ondas de calor para a "
-                        "saúde pública nas regiões metropolitanas brasileiras",
-                        className="mb-2 text-muted",
+                    html.Img(
+                        src=app.get_asset_url("geocalor.png"),
+                        style={"height": "52px", "width": "auto", "flexShrink": "0"},
+                        className="me-3",
                     ),
-                    html.P([
+                    html.Div([
                         html.Span(
-                            "Chamada CNPQ/DECIT/SECTICS/MS Nº 18/2023 — Ciência de dados: "
-                            "mudanças climáticas e impactos para a saúde",
-                            style={"color": "#212529", "fontWeight": "700"},
+                            "GeoCalor",
+                            style={"fontWeight": "700", "fontSize": "1.4rem", "color": "#1761a0",
+                                   "display": "block", "lineHeight": "1.2"},
                         ),
-                    ], className="mb-1"),
-                    
-                ]),
-                fa_icon="fas fa-project-diagram",
+                        html.Span(
+                            "Ondas de calor e saúde nas Regiões Metropolitanas do Brasil",
+                            style={"fontSize": "0.88rem", "color": "#555"},
+                        ),
+                        html.Span(
+                            [html.I(className="fas fa-flask me-1", style={"color": "#6ec1a6"}),
+                             "Chamada CNPq/DECIT/SECTICS/MS Nº 18/2023"],
+                            className="d-block text-muted mt-1",
+                            style={"fontSize": "0.78rem"},
+                        ),
+                    ]),
+                ], className="d-flex align-items-center"),
+                xs=12, md=7, className="mb-3 mb-md-0",
             ),
-            width=12,
-        ), className="mb-2"),
+            dbc.Col(
+                html.Div([
+                    html.A(
+                        html.Img(src=app.get_asset_url("logo.png"),
+                                 style={"height": "46px", "width": "auto"},
+                                 className="img-fluid"),
+                        href="http://www.lagas.unb.br", target="_blank",
+                    ),
+                    html.A(
+                        html.Img(src=app.get_asset_url("geocalor_nome.png"),
+                                 style={"height": "34px", "width": "auto"},
+                                 className="img-fluid"),
+                        href="http://www.lagas.unb.br/index.php/produtos/geocalor",
+                        target="_blank",
+                    ),
+                ], className="d-flex justify-content-md-end justify-content-start align-items-center gap-3"),
+                xs=12, md=5,
+            ),
+        ], className="align-items-center mb-3 pt-2"),
 
-        # ── Texto de apresentação ─────────────────────────────────────────
+        html.Hr(style={"borderColor": "#b3d6e6", "marginTop": "0", "marginBottom": "1.25rem"}),
+
+        # ── Explore o Dashboard ───────────────────────────────────────────────
+        html.H3("Explore o Dashboard", className="text-center mb-1"),
+        html.P(
+            "Navegue pelas seções para acessar os dados climáticos e epidemiológicos.",
+            className="text-muted text-center small mb-3",
+        ),
+        _secoes_row(),
+
+        # ── Sobre o projeto (abaixo das cards) ────────────────────────────────
+        html.Hr(className="my-4"),
         dbc.Row(dbc.Col(
             info_card(
-                "",
+                "Sobre o GeoCalor",
                 html.Div([
-                    html.P(
-                        "O aumento da frequência e intensidade das ondas de calor, impulsionado "
-                        "pelas mudanças climáticas, tem ampliado os riscos à saúde da população, "
-                        "especialmente entre grupos mais vulneráveis.",
-                        className="mb-2 text-muted",
-                    ),
                     html.P(
                         "O projeto GeoCalor investiga os impactos das ondas de calor a partir da "
                         "integração de dados climáticos e de saúde, com foco nas três regiões "
@@ -243,6 +342,7 @@ def layout_inicio(app):
             width=12,
         ), className="mb-3"),
 
+        # ── Publicações ───────────────────────────────────────────────────────
         html.Hr(className="my-4"),
         html.P("Publicações", className="section-heading text-center mb-4"),
         publicacoes_section(app),
@@ -251,4 +351,4 @@ def layout_inicio(app):
         apoiadores_row(app),
         html.Br(), html.Br(),
 
-    ], fluid=True, className="py-4")
+    ], fluid=True, className="py-3")

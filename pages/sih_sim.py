@@ -215,27 +215,20 @@ def layout_sih_sim(app) -> dbc.Container:
 def _tab_infograficos() -> dbc.Container:
     return dbc.Container(
         [
-            # 1-2-3: Caráter de internação | Especialidade do leito | Raça/cor
+            # 1-2: Caráter de internação | Especialidade do leito
             dbc.Row(
                 [
                     dbc.Col(_dyn_card("sihsim-g1-title", "sihsim-g1", "fas fa-hospital",
                                      "sihsim-g1-note"),
-                            xs=12, md=4, className="mb-3"),
+                            xs=12, md=6, className="mb-3"),
                     dbc.Col(_dyn_card("sihsim-g2-title", "sihsim-g2", "fas fa-procedures",
                                      "sihsim-g2-note"),
-                            xs=12, md=4, className="mb-3"),
-                    dbc.Col(chart_card("Raça/cor",
-                                       [dcc.Loading(dcc.Graph(id="sihsim-g3"), type="circle"),
-                                        _nota("Distribuição por raça/cor autodeclarada, "
-                                              "conforme classificação IBGE/DATASUS."),
-                                        dl_btn("sihsim-g3", "raca_cor")],
-                                       fa_icon="fas fa-users"),
-                            xs=12, md=4, className="mb-3"),
+                            xs=12, md=6, className="mb-3"),
                 ],
                 className="align-items-stretch",
             ),
 
-            # 4-5: Pirâmide etária por sexo | Distribuição por faixa etária
+            # 3-4: Pirâmide etária por sexo | Distribuição por faixa etária
             dbc.Row(
                 [
                     dbc.Col(chart_card("Pirâmide etária por sexo",
@@ -255,6 +248,18 @@ def _tab_infograficos() -> dbc.Container:
                             xs=12, md=6, className="mb-3"),
                 ],
                 className="align-items-stretch",
+            ),
+
+            # 5: Raça/cor — após faixa etária
+            dbc.Row(
+                dbc.Col(chart_card("Raça/cor",
+                                   [dcc.Loading(dcc.Graph(id="sihsim-g3"), type="circle"),
+                                    _nota("Distribuição por raça/cor autodeclarada, "
+                                          "conforme classificação IBGE/DATASUS."),
+                                    dl_btn("sihsim-g3", "raca_cor")],
+                                   fa_icon="fas fa-users"),
+                        xs=12, md=6, className="mb-3"),
+                className="justify-content-center",
             ),
 
             # 6: Taxa anual por 1.000 hab.
@@ -1094,7 +1099,7 @@ def register_callbacks_sih_sim(app) -> None:
                 return [dcc.Graph(figure=_empty("Sem dados disponíveis", 400))], titulo, aviso
             if all_years_data.get("no_overlap"):
                 aviso = (
-                    "⚠️ Mapa indisponível para SIM nesta RM: CODMUNRES (residência) não coincide "
+                    "Atenção — Mapa indisponível para SIM nesta RM: CODMUNRES (residência) não coincide "
                     "com os municípios da RM. Corrija o prepare_sih_sim_data.py para usar CODMUNOCOR."
                 )
                 return [dcc.Graph(figure=_empty(
@@ -1149,7 +1154,7 @@ def register_callbacks_sih_sim(app) -> None:
 
         if data.get("no_overlap"):
             aviso = (
-                "⚠️ Mapa indisponível para SIM nesta RM: o parquet foi gerado com CODMUNRES "
+                "Atenção — Mapa indisponível para SIM nesta RM: o parquet foi gerado com CODMUNRES "
                 "(município de residência do falecido), que não coincide com os municípios desta RM. "
                 "Para corrigir, inclua CODMUNOCOR no prepare_sih_sim_data.py."
             )

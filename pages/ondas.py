@@ -1,7 +1,6 @@
 """
 Análise de ondas de calor — ex-dashboard-ondas-calor.
 """
-import logging
 import dash
 from dash import dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
@@ -13,8 +12,6 @@ from datetime import date
 
 from components import chart_card, info_card, dd, dl_btn
 from config import LAYOUT_BASE, WHITE
-
-logger = logging.getLogger(__name__)
 
 
 def chart_note(texto: str) -> html.P:
@@ -428,9 +425,9 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
             """Returns (color, label, abbr) for a given HWDay_Intensity value."""
             if pd.isna(intensity):
                 return "#e63946", "Severa", "S"
+            # Normaliza: minúsculas + sem espaços extras; mantém espaço para
+            # cobrir "low intensity" (formato real do dataset)
             key = str(intensity).strip().lower()
-            if key not in INTENSITY_COLOR:
-                logger.warning("Intensidade desconhecida no calendário: %r", intensity)
             color = INTENSITY_COLOR.get(key, "#e63946")
             label = INTENSITY_LABEL.get(key, str(intensity).strip())
             abbr  = INTENSITY_ABBR.get(key, "OC")
@@ -506,9 +503,7 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
                                 style={"minWidth": "200px"},
                             )
                             day_div = html.Div([btn, popup])
-                        except Exception as e:
-                            logger.warning("Erro ao renderizar dia %d/%d/%d no calendário: %s",
-                                           day, mes, ano, e)
+                        except Exception:
                             day_div = html.Div(str(day), className="calendar-day",
                                                style={"backgroundColor": "#e63946", "color": "white",
                                                       "borderRadius": "50%", "width": "40px",
@@ -801,8 +796,7 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
             fig.update_layout(title=title, xaxis_title="Ano", yaxis_title="Cidade",
                               height=500)
             return fig, is_dias, is_ev
-        except Exception as e:
-            logger.warning("Erro ao gerar heatmap de OC: %s", e)
+        except Exception:
             return go.Figure(), is_dias, is_ev
 
     _THUMB_STYLE = {
