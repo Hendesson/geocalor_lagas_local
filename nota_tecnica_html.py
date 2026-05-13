@@ -21,7 +21,7 @@ NOTA_SISTEMAS_ALERTA_LINKS = r"""<!DOCTYPE html>
     .links-cell a { display: block; color: #1761a0; text-decoration: none;
                     margin-bottom: 4px; word-break: break-all; }
     .links-cell a:hover { text-decoration: underline; color: #2b9eb3; }
-    .links-cell a::before { content: "🔗 "; font-size: 0.85em; }
+    .links-cell a::before { content: "→ "; font-size: 0.85em; }
     .badge { display: inline-block; background: #e8f4fb; color: #1761a0;
              border-radius: 4px; padding: 1px 7px; font-size: 0.78rem;
              font-weight: 600; margin-right: 4px; white-space: nowrap; }
@@ -44,7 +44,7 @@ NOTA_SISTEMAS_ALERTA_LINKS = r"""<!DOCTYPE html>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-LHX5DN0BCW');
+    gtag('config', 'G-LHX5DN0BCW', {page_title: document.title + ' | GeoCalor'});
   </script>
 </head>
 <body>
@@ -65,7 +65,7 @@ NOTA_SISTEMAS_ALERTA_LINKS = r"""<!DOCTYPE html>
   </div>
 
   <div class="no-print-btn">
-    <button onclick="window.print()">🖨 Imprimir / Salvar como PDF</button>
+    <button onclick="window.print()">Imprimir / Salvar como PDF</button>
   </div>
 
   <h1>Sistemas de Alerta — Links e Documentos de Referência</h1>
@@ -278,7 +278,7 @@ NOTA_SISTEMAS_ALERTA_LINKS = r"""<!DOCTYPE html>
   </p>
 
   <p class="no-print-btn" style="text-align:right;margin-top:1.5rem;">
-    <button onclick="window.print()">🖨 Imprimir / Salvar como PDF</button>
+    <button onclick="window.print()">Imprimir / Salvar como PDF</button>
   </p>
 
 </body>
@@ -313,7 +313,7 @@ NOTA_MORTALIDADE = r"""<!DOCTYPE html>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-LHX5DN0BCW');
+    gtag('config', 'G-LHX5DN0BCW', {page_title: document.title + ' | GeoCalor'});
   </script>
 </head>
 <body>
@@ -386,7 +386,7 @@ NOTA_MORTALIDADE = r"""<!DOCTYPE html>
   <p class="no-print" style="margin-top:2rem;">
     <button onclick="window.print()" style="padding:10px 24px; background:#1761a0;
       color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:1rem;">
-      🖨 Imprimir / Salvar como PDF
+      Imprimir / Salvar como PDF
     </button>
   </p>
 </body>
@@ -419,7 +419,7 @@ NOTA_CORRELACAO = r"""<!DOCTYPE html>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-LHX5DN0BCW');
+    gtag('config', 'G-LHX5DN0BCW', {page_title: document.title + ' | GeoCalor'});
   </script>
 </head>
 <body>
@@ -536,7 +536,7 @@ NOTA_TEMPERATURAS = r"""<!DOCTYPE html>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-LHX5DN0BCW');
+    gtag('config', 'G-LHX5DN0BCW', {page_title: document.title + ' | GeoCalor'});
   </script>
 </head>
 <body>
@@ -605,7 +605,7 @@ NOTA_TEMPERATURAS = r"""<!DOCTYPE html>
   <p class="no-print" style="margin-top:2rem;">
     <button onclick="window.print()" style="padding:10px 24px; background:#1761a0;
       color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:1rem;">
-      🖨 Imprimir / Salvar como PDF
+      Imprimir / Salvar como PDF
     </button>
   </p>
 </body>
@@ -637,7 +637,7 @@ NOTA_ONDAS = r"""<!DOCTYPE html>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-LHX5DN0BCW');
+    gtag('config', 'G-LHX5DN0BCW', {page_title: document.title + ' | GeoCalor'});
   </script>
 </head>
 <body>
@@ -715,7 +715,7 @@ NOTA_ONDAS = r"""<!DOCTYPE html>
   <p class="no-print" style="margin-top:2.5rem;">
     <button onclick="window.print()" style="padding:10px 24px; background:#1761a0;
       color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:1rem;">
-      🖨 Imprimir / Salvar como PDF
+      Imprimir / Salvar como PDF
     </button>
   </p>
 </body>
@@ -750,7 +750,7 @@ NOTA_SIH_SIM = r"""<!DOCTYPE html>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-LHX5DN0BCW');
+    gtag('config', 'G-LHX5DN0BCW', {page_title: document.title + ' | GeoCalor'});
   </script>
 </head>
 <body>
@@ -948,7 +948,7 @@ NOTA_SIH_SIM = r"""<!DOCTYPE html>
   <p class="no-print" style="margin-top:2rem;">
     <button onclick="window.print()" style="padding:10px 24px; background:#1761a0;
       color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:1rem;">
-      🖨 Imprimir / Salvar como PDF
+      Imprimir / Salvar como PDF
     </button>
   </p>
 </body>

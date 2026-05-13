@@ -4,7 +4,6 @@ Integra: início, temperaturas, ondas de calor, sistemas de alerta (página Dash
 """
 import logging
 import os
-from pathlib import Path
 
 import dash
 from dash import Input, Output, State, dcc, html, callback
@@ -54,8 +53,8 @@ try:
             data_processor.prepare_heatmap_data()
             data_processor.prepare_heatmap_events_data()
             logger.info("Caches de heatmap pré-computados.")
-        except Exception as e:
-            logger.warning("Erro ao pré-computar caches de heatmap: %s", e)
+        except Exception as _e:
+            logger.warning("Erro ao pré-computar caches de heatmap: %s", _e)
 except Exception as e:
     logger.error("Erro ao inicializar dados: %s", e)
     df = pd.DataFrame()
@@ -69,31 +68,35 @@ app = dash.Dash(
     external_stylesheets=[
         dbc.themes.BOOTSTRAP,
         "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css",
+        "https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap",
     ],
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
 server = app.server
-_GA_ID = os.environ.get("GA_MEASUREMENT_ID", "G-LHX5DN0BCW")
-
 app.title = "Dashboard de Ondas de Calor — GeoCalor"
 
-app.index_string = f"""<!DOCTYPE html>
+app.index_string = """<!DOCTYPE html>
 <html>
     <head>
-        {{%metas%}}
-        <title>{{%title%}}</title>
+        {%metas%}
+        <title>{%title%}</title>
         <link rel="icon" type="image/png" href="/assets/geocalor.png">
+        <!-- Preconnect: reduz latência de DNS/TCP/TLS para recursos externos -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+        <link rel="preconnect" href="https://www.googletagmanager.com">
         <!-- Google tag (gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id={_GA_ID}"></script>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-LHX5DN0BCW"></script>
         <script>
           window.dataLayer = window.dataLayer || [];
-          function gtag(){{dataLayer.push(arguments);}}
+          function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
 
-          /* Mapa de títulos por rota — GA e document.title recebem o título correto */
-          var _PAGE_TITLES = {{
-            '/':                'Sobre o GeoCalor — GeoCalor',
-            '/inicio':          'Sobre o GeoCalor — GeoCalor',
+          /* Mapa de títulos por rota — GA recebe o título correto de cada página */
+          var _PAGE_TITLES = {
+            '/':                'Sobre o GeoCalor',
+            '/inicio':          'Sobre o GeoCalor',
             '/temperaturas':    'Caracterização Climática — GeoCalor',
             '/ondas':           'Ondas de Calor — GeoCalor',
             '/sih-sim':         'Perfil Epidemiológico — GeoCalor',
@@ -101,41 +104,40 @@ app.index_string = f"""<!DOCTYPE html>
             '/correlacao':      'Internação × OC — GeoCalor',
             '/sistemas-alerta': 'Sistemas de Alerta — GeoCalor',
             '/contato':         'Equipe e Contato — GeoCalor',
-          }};
+          };
 
-          function _gaPageView() {{
+          function _gaPageView() {
             var path  = window.location.pathname;
             var title = _PAGE_TITLES[path] || document.title;
-            document.title = title;
-            gtag('event', 'page_view', {{
+            gtag('event', 'page_view', {
               page_path:  path,
               page_title: title,
-              send_to:    '{_GA_ID}',
-            }});
-          }}
+              send_to:    'G-LHX5DN0BCW',
+            });
+          }
 
           /* Carga inicial */
-          gtag('config', '{_GA_ID}', {{send_page_view: false}});
+          gtag('config', 'G-LHX5DN0BCW', {send_page_view: false});
           _gaPageView();
 
           /* Rastreia navegação SPA via pushState (Dash usa React Router → pushState) */
-          (function() {{
+          (function() {
             var _push = history.pushState;
-            history.pushState = function(state, title, url) {{
+            history.pushState = function(state, title, url) {
               _push.apply(history, arguments);
               _gaPageView();
-            }};
+            };
             window.addEventListener('popstate', _gaPageView);
-          }})();
+          })();
         </script>
-        {{%css%}}
+        {%css%}
     </head>
     <body>
-        {{%app_entry%}}
+        {%app_entry%}
         <footer>
-            {{%config%}}
-            {{%scripts%}}
-            {{%renderer%}}
+            {%config%}
+            {%scripts%}
+            {%renderer%}
         </footer>
     </body>
 </html>"""
@@ -275,12 +277,8 @@ _MAPA_INDISPONIVEL = """<!DOCTYPE html><html><body style="
 
 def _serve_mapa(nome: str, filename: str):
     """Serve mapa HTML do diretório mapa_eventos/ ou página informativa."""
-    safe_dir   = Path(MAPA_EVENTOS_DIR).resolve()
-    requested  = (safe_dir / filename).resolve()
-    if not str(requested).startswith(str(safe_dir) + os.sep) and requested != safe_dir:
-        logger.warning("_serve_mapa: tentativa de path traversal bloqueada: %s", filename)
-        return flask.Response("Forbidden", status=403)
-    if requested.exists():
+    local = os.path.join(MAPA_EVENTOS_DIR, filename)
+    if os.path.exists(local):
         return flask.send_from_directory(MAPA_EVENTOS_DIR, filename)
     return flask.Response(_MAPA_INDISPONIVEL, mimetype="text/html; charset=utf-8")
 
@@ -312,6 +310,7 @@ app.layout = html.Div(
         dcc.Location(id="url", refresh=False),
         build_navbar(app),
         html.Div(id="page-content", className="dashboard-main px-2 px-md-3 pb-4"),
+        html.Span(id="nav-active-placeholder", style={"display": "none"}),
     ],
     className="dashboard-shell min-vh-100",
 )
@@ -340,6 +339,29 @@ app.clientside_callback(
     Input("navbar-toggler", "n_clicks"),
     Input("url", "pathname"),
     State("navbar-collapse", "is_open"),
+)
+
+app.clientside_callback(
+    """
+    function(pathname) {
+        if (!pathname) return '';
+        var p = (pathname === '/inicio') ? '/' : pathname;
+
+        // Destaca o link ativo na navbar
+        var links = document.querySelectorAll('.geocalor-nav-link');
+        links.forEach(function(l) {
+            l.classList.toggle('active', l.getAttribute('href') === p);
+        });
+
+        // Esconde a navbar na página inicial (o Explore cobre a navegação)
+        var nav = document.querySelector('.geocalor-topnav');
+        if (nav) nav.style.display = (p === '/') ? 'none' : '';
+
+        return '';
+    }
+    """,
+    Output("nav-active-placeholder", "children"),
+    Input("url", "pathname"),
 )
 
 
