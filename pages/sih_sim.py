@@ -78,11 +78,11 @@ def layout_sih_sim(app) -> dbc.Container:
 
     return dbc.Container(
         [
-            # ── Título ────────────────────────────────────────────────────
-            dbc.Row(dbc.Col(
+            # ── Cabeçalho ─────────────────────────────────────────────────
+            dbc.Row(dbc.Col([
+                html.Img(src=app.get_asset_url("geocalor.png"), className="logo-img"),
                 html.H2("Perfil epidemiológico das Regiões Metropolitanas", className="text-center my-4"),
-                width=12,
-            )),
+            ], width=12), className="text-center"),
 
             # ── Banner com seletores de visualização ──────────────────────
             html.Div(

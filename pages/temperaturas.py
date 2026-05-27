@@ -179,6 +179,13 @@ def layout_temperaturas(app, df, cidades, anos):
                             "clique para exibir coordenadas, volume de dados e período.",
                             className="small text-muted mb-2",
                         ),
+                        html.A(
+                            [html.I(className="fas fa-expand me-1"), "Abrir mapa completo"],
+                            href="/mapa-estacoes",
+                            target="_blank",
+                            className="btn-download-asset mb-2",
+                            title="Abre o mapa em tela cheia — use Ctrl+P para salvar como PDF",
+                        ),
                         html.Iframe(
                             src="/mapa-estacoes",
                             style={"width": "100%", "height": "clamp(240px, 52vw, 420px)",

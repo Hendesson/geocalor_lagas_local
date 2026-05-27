@@ -303,9 +303,9 @@ def layout_contato(app):
                         html.Div([
                             html.P(
                                 [
-                                    "Pereira, HA, Lofrano-Porto, B, Gurgel, H, "
-                                    "Bezerra, AB, Silva, EL, Oliveira, LF, Leal, C. M., "
-                                    "Cipriano, R. O. Sá, IAA. ",
+                                    "Pereira, HA., Lofrano-Porto, B., Gurgel, H., "
+                                    "Bezerra, AB., Silva, EL., Santana-Porto, EA., Oliveira, LF., Leal, CM.,"
+                                    "Blanco, AD., Cipriano, RO. Sá, IA. ",
                                     html.Strong("Dashboard de Ondas de Calor e Saúde."),
                                     " Laboratório de Geografia, Ambiente e Saúde (LAGAS), "
                                     "Universidade de Brasília, Brasília, DF.",
@@ -345,6 +345,30 @@ def layout_contato(app):
                            }),
                     ], width=12),
                 ]),
+            ])
+        ], className="mb-5 shadow-sm"),
+
+        dbc.Card([
+            dbc.CardBody([
+                html.H3(
+                    [html.I(className="fas fa-comment-alt me-2"), "Feedback"],
+                    className="text-center mb-3",
+                ),
+                html.P(
+                    "Sua opinião é importante para melhorarmos o dashboard. "
+                    "Responda a um breve formulário e nos ajude a aprimorar a experiência de uso.",
+                    className="text-center text-muted mb-4",
+                ),
+                html.Div(
+                    html.A(
+                        [html.I(className="fas fa-external-link-alt me-2"),
+                         "Acessar formulário de feedback"],
+                        href="https://docs.google.com/forms/d/e/1FAIpQLSfCpeKb-VNoTos8n5Pr0mr6wtNt2re8-ZTn94caXqRq-xTwkg/viewform",
+                        target="_blank",
+                        className="btn btn-primary",
+                    ),
+                    className="text-center",
+                ),
             ])
         ], className="mb-5 shadow-sm"),
 

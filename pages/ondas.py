@@ -64,6 +64,50 @@ def layout_ondas(app, df, cidades, anos):
     ano_default   = min(anos[-1], 2023) if anos else None
 
     return dbc.Container([
+
+        # ── Toast informativo: O que são ondas de calor? ─────────────────────
+        dcc.Interval(
+            id="modal-oc-timer",
+            interval=5000,
+            n_intervals=0,
+            max_intervals=1,
+        ),
+        dbc.Toast(
+            [
+                html.P(
+                    "As mudanças climáticas globais têm tornado as ondas de calor "
+                    "cada vez mais intensas e frequentes.",
+                    className="small text-muted mb-2",
+                ),
+                html.A(
+                    ["Saiba mais ", html.I(className="fas fa-arrow-right",
+                                          style={"fontSize": "0.7rem"})],
+                    href="/o-que-sao-ondas-de-calor",
+                    className="small fw-semibold text-decoration-none",
+                    style={"color": "#1761a0"},
+                ),
+                html.Div(className="oc-toast-bar mt-2"),
+            ],
+            id="modal-oc-intro",
+            header=html.Span([
+                html.I(className="fas fa-fire me-2",
+                       style={"color": "#e63946", "fontSize": "0.75rem"}),
+                "O que são as ondas de calor?",
+            ], style={"fontSize": "0.82rem", "fontWeight": "600"}),
+            is_open=True,
+            dismissable=False,
+            style={
+                "position": "fixed",
+                "top": "72px",
+                "right": "24px",
+                "zIndex": 9998,
+                "width": "280px",
+                "boxShadow": "0 2px 12px rgba(0,0,0,0.10)",
+                "borderRadius": "6px",
+                "border": "1px solid #ccd6e0",
+            },
+        ),
+
         # ── Cabeçalho ─────────────────────────────────────────────────────────
         dbc.Row(dbc.Col([
             html.Img(src=app.get_asset_url('geocalor.png'), className="logo-img"),
@@ -386,6 +430,27 @@ def layout_ondas(app, df, cidades, anos):
 
 
 def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualizer):
+
+    app.clientside_callback(
+        """
+        function(n) {
+            var now = Date.now();
+            var cooldown = 180000;
+            if (!n || n === 0) {
+                if (window._ocLastShown && (now - window._ocLastShown) < cooldown) {
+                    return false;
+                }
+                window._ocLastShown = now;
+                return window.dash_clientside.no_update;
+            }
+            if (n > 0) return false;
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output("modal-oc-intro", "is_open"),
+        Input("modal-oc-timer", "n_intervals"),
+    )
+
 
     def create_calendar_component(dias_calor, ano, mes, cidade, dia_info):
         cal = calendar.monthcalendar(ano, mes)
