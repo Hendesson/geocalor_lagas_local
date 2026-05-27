@@ -15,11 +15,12 @@ from data_processing import DataProcessor
 from visualization import Visualizer
 from db import execute as db_execute
 from nota_tecnica_html import NOTA_ONDAS, NOTA_TEMPERATURAS, NOTA_SIH_SIM, NOTA_CORRELACAO, NOTA_MORTALIDADE, NOTA_SISTEMAS_ALERTA_LINKS
-from pages import contato, inicio, ondas, sistemas_alerta, temperaturas, sih_sim, correlacao, mortalidade
+from pages import contato, inicio, ondas, sistemas_alerta, temperaturas, sih_sim, correlacao, mortalidade, ondas_calor_info
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+PORT = int(os.environ.get("PORT", 8050))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MAPA_EVENTOS_DIR = os.path.join(BASE_DIR, "mapa_eventos")
 
@@ -95,15 +96,16 @@ app.index_string = """<!DOCTYPE html>
 
           /* Mapa de títulos por rota — GA recebe o título correto de cada página */
           var _PAGE_TITLES = {
-            '/':                'Sobre o GeoCalor',
-            '/inicio':          'Sobre o GeoCalor',
-            '/temperaturas':    'Caracterização Climática — GeoCalor',
-            '/ondas':           'Ondas de Calor — GeoCalor',
-            '/sih-sim':         'Perfil Epidemiológico — GeoCalor',
-            '/mortalidade':     'Mortalidade × OC — GeoCalor',
-            '/correlacao':      'Internação × OC — GeoCalor',
-            '/sistemas-alerta': 'Sistemas de Alerta — GeoCalor',
-            '/contato':         'Equipe e Contato — GeoCalor',
+            '/':                          'Sobre o GeoCalor',
+            '/inicio':                    'Sobre o GeoCalor',
+            '/temperaturas':              'Caracterização Climática — GeoCalor',
+            '/ondas':                     'Ondas de Calor — GeoCalor',
+            '/sih-sim':                   'Perfil Epidemiológico — GeoCalor',
+            '/mortalidade':               'Mortalidade × OC — GeoCalor',
+            '/correlacao':                'Internação × OC — GeoCalor',
+            '/sistemas-alerta':           'Sistemas de Alerta — GeoCalor',
+            '/contato':                   'Equipe e Contato — GeoCalor',
+            '/o-que-sao-ondas-de-calor':  'O que são as Ondas de Calor? — GeoCalor',
           };
 
           function _gaPageView() {
@@ -221,6 +223,8 @@ def render_page(pathname):
         return mortalidade.layout_mortalidade(app)
     if path == "/contato":
         return contato.layout_contato(app)
+    if path == "/o-que-sao-ondas-de-calor":
+        return ondas_calor_info.layout_ondas_calor_info(app)
     return inicio.layout_inicio(app)
 
 
@@ -293,8 +297,10 @@ def serve_mapa_geral():
     return _serve_mapa("mapa_geral", "mapa_geral.html")
 
 
+
+
 SPA_INDEX_PATHS = sorted(
-    {e["path"] for e in PAGE_ENTRIES if e["path"] != "/"} | {"/inicio"},
+    {e["path"] for e in PAGE_ENTRIES if e["path"] != "/"} | {"/inicio", "/o-que-sao-ondas-de-calor"},
     key=len,
     reverse=True,
 )
@@ -311,6 +317,43 @@ app.layout = html.Div(
         build_navbar(app),
         html.Div(id="page-content", className="dashboard-main px-2 px-md-3 pb-4"),
         html.Span(id="nav-active-placeholder", style={"display": "none"}),
+
+        # ── Toast global de Feedback ──────────────────────────────────────────
+        dbc.Toast(
+            [
+                html.P(
+                    "Sua opinião é muito importante para melhorarmos o dashboard.",
+                    className="small text-muted mb-2",
+                ),
+                html.A(
+                    ["Responder ", html.I(className="fas fa-arrow-right",
+                                         style={"fontSize": "0.7rem"})],
+                    href="https://docs.google.com/forms/d/e/1FAIpQLSfCpeKb-VNoTos8n5Pr0mr6wtNt2re8-ZTn94caXqRq-xTwkg/viewform",
+                    target="_blank",
+                    className="small fw-semibold text-decoration-none",
+                    style={"color": "#1761a0"},
+                ),
+                html.Div(className="oc-toast-bar mt-2"),
+            ],
+            id="feedback-toast",
+            header=html.Span([
+                html.I(className="fas fa-comment-alt me-2",
+                       style={"color": "#2b9eb3", "fontSize": "0.75rem"}),
+                "Deixe seu feedback",
+            ], style={"fontSize": "0.82rem", "fontWeight": "600"}),
+            is_open=False,
+            dismissable=False,
+            style={
+                "position": "fixed",
+                "top": "72px",
+                "right": "24px",
+                "zIndex": 9998,
+                "width": "280px",
+                "boxShadow": "0 2px 12px rgba(0,0,0,0.10)",
+                "borderRadius": "6px",
+                "border": "1px solid #ccd6e0",
+            },
+        ),
     ],
     className="dashboard-shell min-vh-100",
 )
@@ -366,6 +409,31 @@ app.clientside_callback(
 
 
 
+app.clientside_callback(
+    """
+    function(pathname) {
+        var home = ['/', '/inicio'];
+        if (window._fbOpenTimer)  clearTimeout(window._fbOpenTimer);
+        if (window._fbCloseTimer) clearTimeout(window._fbCloseTimer);
+        if (!pathname || home.indexOf(pathname) !== -1) return false;
+        var now = Date.now();
+        var cooldown = 180000;
+        if (window._fbLastShown && (now - window._fbLastShown) < cooldown) return false;
+        var delay = (pathname === '/ondas') ? 5500 : 500;
+        window._fbOpenTimer = setTimeout(function() {
+            window._fbLastShown = Date.now();
+            window.dash_clientside.set_props('feedback-toast', {is_open: true});
+            window._fbCloseTimer = setTimeout(function() {
+                window.dash_clientside.set_props('feedback-toast', {is_open: false});
+            }, 5000);
+        }, delay);
+        return false;
+    }
+    """,
+    Output("feedback-toast", "is_open"),
+    Input("url", "pathname"),
+)
+
 temperaturas.register_callbacks_temperaturas(app, df, visualizer)
 ondas.register_callbacks_ondas(app, df, cidades, anos, data_processor, visualizer)
 sistemas_alerta.register_callbacks_sistemas_alerta(app)
@@ -376,5 +444,4 @@ contato.register_callbacks_contato(app)
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8050))
-    app.run(host="127.0.0.1", port=port, debug=True)
+    app.run(host="127.0.0.1", port=PORT, debug=True)
