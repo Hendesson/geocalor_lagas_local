@@ -23,20 +23,23 @@ def kpi_box(valor, label: str, icon: str = "", classe: str = "kpi-teal") -> html
     return html.Div(className=f"kpi-card {classe}", children=children)
 
 
-def chart_card(titulo: str, children, fa_icon: str = "fas fa-chart-line") -> html.Div:
-    """Card com header gradiente e corpo branco — contêiner padrão para gráficos.
+def chart_card(titulo: str, children, fa_icon: str = "fas fa-chart-line",
+               header_class: str = "") -> html.Div:
+    """Card com header e corpo branco — contêiner padrão para gráficos.
 
     Args:
         titulo: Texto do header.
         children: Conteúdo (dcc.Graph, html.Div, etc.).
         fa_icon: Ícone Font Awesome para o header.
+        header_class: Classe CSS extra para o header (ex: "geo-header-orange").
     """
+    hcls = f"geo-map-section-header {header_class}".strip()
     return html.Div(
         className="chart-card shadow-sm border-0 mb-4",
         children=[
             html.Div(
                 [html.I(className=f"{fa_icon} me-2"), titulo],
-                className="geo-map-section-header",
+                className=hcls,
             ),
             html.Div(children, className="chart-card-body p-3"),
         ],
