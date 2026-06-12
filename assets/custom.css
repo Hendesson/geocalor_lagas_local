@@ -189,6 +189,14 @@ h5 {
     border-bottom: 2px solid var(--color-primary) !important;
     border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
 }
+.geo-header-orange {
+    color: #c47a18 !important;
+    border-bottom-color: #c47a18 !important;
+}
+.geo-header-teal {
+    color: #2b9eb3 !important;
+    border-bottom-color: #2b9eb3 !important;
+}
 
 .btn-primary, .btn-outline-primary {
     background: var(--color-primary);
