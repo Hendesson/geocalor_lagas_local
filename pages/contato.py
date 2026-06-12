@@ -1,18 +1,61 @@
 """
 Equipe e contato — ex-dashboard-contato.
 """
+import json
 import dash
 from dash import dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
 import dash_leaflet as dl
 
-_CITACAO = (
-    "HENDESSON ALVES; PORTO, B. L.; GURGEL, H. C.; BEZERRA, A. B.; "
-    "SILVA, E. L. E.; OLIVEIRA, L. F.; LEAL, C. M.; CIPRIANO, R. O.; "
-    "SÁ, I. A. A. Dashboard de Ondas de Calor e Saúde. "
-    "Laboratório de Geografia, Ambiente e Saúde (LAGAS), "
-    "Universidade de Brasília, Brasília, DF."
-)
+from components import chart_card, info_card
+
+_CITACOES = {
+    "ABNT": (
+        "Pereira, HA., Lofrano-Porto, B., GURGEL, H. C. Bezerra, AB., Silva, EL., Santana-Porto, EA., "
+        " Oliveira, LF., Leal, CM.,Blanco, AD., Cipriano, RO. Sá, IA. (2026). Geocalor - "
+        "Dashboard para analisar e disseminar informações sobre ondas de calor e saúde em "
+        "regiões metropolitanas do Brasil. Laboratório de Geografia, Ambiente e Saúde (LAGAS). "
+        "https://doi.org/10.5281/zenodo.20616917"
+    ),
+    "APA": (
+        "Alves, H., Porto, B., Gurgel, H., Feitosa de Oliveira, L., Bezerra, A., "
+        "Alves, E., LEAL, C., Cipriano, R., Rodríguez, D., Lima e Silva, E., & "
+        "Jesus Gomes de Sá, I. A. (2026). Geocalor - Dashboard para analisar e "
+        "disseminar informações sobre ondas de calor e saúde em regiões metropolitanas "
+        "do Brasil. Laboratório de Geografia, Ambiente e Saúde (LAGAS). "
+        "https://doi.org/10.5281/zenodo.20616917"
+    ),
+    "Harvard": (
+        'Alves, H. et al. (2026) "Geocalor - Dashboard para analisar e disseminar '
+        "informações sobre ondas de calor e saúde em regiões metropolitanas do Brasil.\". "
+        "Laboratório de Geografia, Ambiente e Saúde (LAGAS). doi:10.5281/zenodo.20616917."
+    ),
+    "MLA": (
+        "Alves, H., et al. Geocalor - dashboard para analisar e disseminar informações "
+        "sobre ondas de calor e saúde em regiões metropolitanas do brasil. "
+        "Laboratório de Geografia, Ambiente e Saúde (LAGAS), 9 June 2026, "
+        "https://doi.org/10.5281/zenodo.20616917."
+    ),
+    "Vancouver": (
+        "1. Alves H, Porto B, Gurgel H, Feitosa de Oliveira L, Bezerra A, Alves E, et al. "
+        "Geocalor - Dashboard para analisar e disseminar informações sobre ondas de calor "
+        "e saúde em regiões metropolitanas do Brasil. "
+        "Laboratório de Geografia, Ambiente e Saúde (LAGAS); 2026."
+    ),
+    "Chicago": (
+        "Alves, Hendesson, Bruno Porto, Helen Gurgel, Lívia Feitosa de Oliveira, "
+        "Amarílis Bezerra, Eucilene Alves, CAIO LEAL, et al. \"Geocalor - dashboard para "
+        "analisar e disseminar informações sobre ondas de calor e saúde em regiões "
+        "metropolitanas do brasil.\". Laboratório de Geografia, Ambiente e Saúde (LAGAS), "
+        "June 9, 2026. https://doi.org/10.5281/zenodo.20616917."
+    ),
+    "IEEE": (
+        "[1]H. Alves et al., \"Geocalor - Dashboard para analisar e disseminar informações "
+        "sobre ondas de calor e saúde em regiões metropolitanas do Brasil.\". "
+        "Laboratório de Geografia, Ambiente e Saúde (LAGAS), Jun. 09, 2026. "
+        "doi: 10.5281/zenodo.20616917."
+    ),
+}
 
 
 TEAM_MEMBERS = [
@@ -292,85 +335,133 @@ def layout_contato(app):
 
         html.Br(),
 
-        dbc.Card([
-            dbc.CardBody([
-                html.H3(
-                    [html.I(className="fas fa-quote-left me-2"), "Como Referenciar"],
-                    className="text-center mb-4",
+        chart_card(
+            "Como citar este trabalho",
+            [
+                html.P(
+                    "Se você utilizar o GeoCalor Dashboard em pesquisas, relatórios ou "
+                    "publicações acadêmicas, por favor utilize a referência abaixo:",
+                    className="small text-muted mb-3",
                 ),
-                dbc.Row([
-                    dbc.Col([
-                        html.Div([
-                            html.P(
-                                [
-                                    "Pereira, HA., Lofrano-Porto, B., Gurgel, H., "
-                                    "Bezerra, AB., Silva, EL., Santana-Porto, EA., Oliveira, LF., Leal, CM.,"
-                                    "Blanco, AD., Cipriano, RO. Sá, IA. ",
-                                    html.Strong("Dashboard de Ondas de Calor e Saúde."),
-                                    " Laboratório de Geografia, Ambiente e Saúde (LAGAS), "
-                                    "Universidade de Brasília, Brasília, DF.",
-                                ],
-                                className="mb-3",
-                                style={"fontSize": "0.95rem", "lineHeight": "1.7"},
-                            ),
-                            html.Div([
+                html.Div(
+                    [
+                        html.Span("Estilo:", className="small text-muted fw-semibold me-2"),
+                        dbc.Select(
+                            id="contato-citacao-estilo",
+                            options=[{"label": s, "value": s}
+                                     for s in ["ABNT", "APA", "Harvard", "MLA",
+                                               "Vancouver", "Chicago", "IEEE"]],
+                            value="ABNT",
+                            style={"width": "160px", "fontSize": "0.85rem"},
+                        ),
+                    ],
+                    className="d-flex align-items-center mb-3 flex-wrap gap-2",
+                ),
+                html.Div(
+                    [
+                        html.P(
+                            id="contato-citacao-texto",
+                            children=_CITACOES["ABNT"],
+                            className="mb-2",
+                            style={"fontSize": "0.9rem", "lineHeight": "1.75",
+                                   "color": "#2c3e50"},
+                        ),
+                        html.Div(
+                            [
+                                html.I(className="fas fa-link me-1",
+                                       style={"fontSize": "0.75rem", "color": "#1761a0"}),
+                                html.A(
+                                    "https://doi.org/10.5281/zenodo.20616917",
+                                    href="https://doi.org/10.5281/zenodo.20616917",
+                                    target="_blank",
+                                    className="text-decoration-none fw-semibold",
+                                    style={"fontSize": "0.82rem", "color": "#1761a0"},
+                                ),
+                            ],
+                            className="d-flex align-items-center mb-3",
+                        ),
+                        html.Div(
+                            [
                                 dcc.Clipboard(
-                                    content=_CITACAO,
-                                    title="Copiar citação",
+                                    id="contato-citacao-clipboard",
+                                    content=_CITACOES["ABNT"],
+                                    title="Copiar referência",
                                     style={
                                         "display": "inline-flex",
                                         "alignItems": "center",
                                         "gap": "6px",
-                                        "background": "linear-gradient(90deg,#1761a0,#2b9eb3)",
+                                        "background": "#1761a0",
                                         "color": "#fff",
                                         "border": "none",
-                                        "borderRadius": "8px",
+                                        "borderRadius": "4px",
                                         "padding": "6px 14px",
-                                        "fontSize": "0.85rem",
+                                        "fontSize": "0.82rem",
                                         "fontWeight": "600",
                                         "cursor": "pointer",
+                                        "letterSpacing": "0.02em",
                                     },
                                 ),
                                 html.Span(
+                                    [html.I(className="fas fa-check me-1"),
+                                     "Referência copiada"],
                                     id="msg-copiado",
                                     className="text-success small ms-2",
                                     style={"display": "none"},
                                 ),
-                            ], className="d-flex align-items-center"),
-                        ], className="p-3",
-                           style={
-                               "background": "linear-gradient(120deg, #eaf6fb 0%, #e3f7ee 100%)",
-                               "borderRadius": "12px",
-                               "border": "1.5px solid #b3d6e6",
-                           }),
-                    ], width=12),
-                ]),
-            ])
-        ], className="mb-5 shadow-sm"),
+                                html.A(
+                                    [html.I(className="fas fa-archive me-1"),
+                                     "Repositório Zenodo"],
+                                    href="https://doi.org/10.5281/zenodo.20616917",
+                                    target="_blank",
+                                    className="btn btn-outline-secondary btn-sm ms-2",
+                                    style={"fontSize": "0.8rem"},
+                                ),
+                            ],
+                            className="d-flex align-items-center flex-wrap gap-1",
+                        ),
+                    ],
+                    className="p-3",
+                    style={
+                        "background": "#f8fafc",
+                        "borderLeft": "3px solid #1761a0",
+                        "borderRadius": "0 4px 4px 0",
+                    },
+                ),
+            ],
+            fa_icon="fas fa-bookmark",
+        ),
 
-        dbc.Card([
-            dbc.CardBody([
-                html.H3(
-                    [html.I(className="fas fa-comment-alt me-2"), "Feedback"],
-                    className="text-center mb-3",
-                ),
-                html.P(
-                    "Sua opinião é importante para melhorarmos o dashboard. "
-                    "Responda a um breve formulário e nos ajude a aprimorar a experiência de uso.",
-                    className="text-center text-muted mb-4",
-                ),
-                html.Div(
+        chart_card(
+            "Avaliação do dashboard",
+            dbc.Row([
+                dbc.Col([
+                    html.P(
+                        "A avaliação contínua do GeoCalor Dashboard é fundamental para "
+                        "aprimorar sua utilidade como ferramenta de suporte à pesquisa e "
+                        "à gestão em saúde. Sua contribuição auxilia na identificação de "
+                        "melhorias na experiência de uso, na qualidade das visualizações e "
+                        "na relevância dos dados apresentados.",
+                        className="small text-muted mb-2",
+                    ),
+                    html.P(
+                        "O formulário é breve, anônimo e leva menos de 3 minutos.",
+                        className="small text-muted mb-0 fst-italic",
+                    ),
+                ], xs=12, md=8, className="mb-3 mb-md-0"),
+                dbc.Col(
                     html.A(
                         [html.I(className="fas fa-external-link-alt me-2"),
-                         "Acessar formulário de feedback"],
+                         "Acessar formulário"],
                         href="https://docs.google.com/forms/d/e/1FAIpQLSfCpeKb-VNoTos8n5Pr0mr6wtNt2re8-ZTn94caXqRq-xTwkg/viewform",
                         target="_blank",
-                        className="btn btn-primary",
+                        className="btn btn-outline-primary btn-sm",
                     ),
-                    className="text-center",
+                    xs=12, md=4,
+                    className="d-flex align-items-center justify-content-md-end",
                 ),
-            ])
-        ], className="mb-5 shadow-sm"),
+            ], className="align-items-center"),
+            fa_icon="fas fa-poll-h",
+        ),
 
         html.Br(),
     ], fluid=True, className="py-4")
@@ -423,4 +514,18 @@ def register_callbacks_contato(app):
         if btn == "next-button":
             return (cur + 1) % n
         return cur
+
+    _citacoes_js = {k: v.replace("\n", " ") for k, v in _CITACOES.items()}
+    app.clientside_callback(
+        f"""
+        function(estilo) {{
+            var citacoes = {json.dumps(_citacoes_js, ensure_ascii=False)};
+            var texto = citacoes[estilo] || citacoes["ABNT"];
+            return [texto, texto];
+        }}
+        """,
+        [Output("contato-citacao-texto",     "children"),
+         Output("contato-citacao-clipboard", "content")],
+        Input("contato-citacao-estilo", "value"),
+    )
 

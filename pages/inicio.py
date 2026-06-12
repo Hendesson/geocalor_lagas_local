@@ -4,7 +4,7 @@ Página inicial — boas-vindas e apoiadores (ex-dashboard-inicio).
 from dash import html
 import dash_bootstrap_components as dbc
 
-from components import info_card
+from components import chart_card, info_card
 
 
 def logo_apoiador(app, img, href, height="90px"):
@@ -344,78 +344,61 @@ def layout_inicio(app):
 
         # ── O que são ondas de calor? (CTA) ──────────────────────────────────
         dbc.Row(dbc.Col(
-            dbc.Card(
-                dbc.CardBody(
-                    dbc.Row([
-                        dbc.Col([
-                            html.Div([
-                                html.I(className="fas fa-fire me-2",
-                                       style={"color": "#e63946"}),
-                                html.Span(
-                                    "O que são as ondas de calor?",
-                                    style={"fontWeight": "700", "color": "#1a2e44",
-                                           "fontSize": "0.95rem"},
-                                ),
-                            ], className="d-flex align-items-center mb-2"),
-                            html.P(
-                                "Entenda o conceito científico, a metodologia do Fator de Excesso "
-                                "de Calor (EHF), a classificação por intensidade e os impactos na "
-                                "saúde humana.",
-                                className="text-muted small mb-0",
-                            ),
-                        ], xs=12, md=9, className="mb-2 mb-md-0"),
-                        dbc.Col(
-                            html.A(
-                                [html.I(className="fas fa-book-open me-1"), "Saiba mais"],
-                                href="/o-que-sao-ondas-de-calor",
-                                className="btn btn-outline-primary btn-sm",
-                            ),
-                            xs=12, md=3,
-                            className="d-flex align-items-center justify-content-start justify-content-md-end",
+            chart_card(
+                "O que são as ondas de calor?",
+                dbc.Row([
+                    dbc.Col(
+                        html.P(
+                            "Entenda o conceito científico, a metodologia do Fator de Excesso "
+                            "de Calor (EHF), a classificação por intensidade e os impactos na "
+                            "saúde humana.",
+                            className="text-muted small mb-0",
                         ),
-                    ], className="align-items-center"),
-                ),
-                style={"borderTop": "3px solid #e63946"},
+                        xs=12, md=9, className="mb-2 mb-md-0",
+                    ),
+                    dbc.Col(
+                        html.A(
+                            [html.I(className="fas fa-book-open me-1"), "Saiba mais"],
+                            href="/o-que-sao-ondas-de-calor",
+                            className="btn btn-outline-primary btn-sm",
+                        ),
+                        xs=12, md=3,
+                        className="d-flex align-items-center justify-content-start justify-content-md-end",
+                    ),
+                ], className="align-items-center"),
+                fa_icon="fas fa-fire",
+                header_class="geo-header-orange",
             ),
             width=12,
         ), className="mb-3"),
 
         # ── Feedback ─────────────────────────────────────────────────────────
         dbc.Row(dbc.Col(
-            dbc.Card(
-                dbc.CardBody(
-                    dbc.Row([
-                        dbc.Col([
-                            html.Div([
-                                html.I(className="fas fa-comment-alt me-2",
-                                       style={"color": "#2b9eb3"}),
-                                html.Span(
-                                    "Deixe seu feedback",
-                                    style={"fontWeight": "700", "color": "#1a2e44",
-                                           "fontSize": "0.95rem"},
-                                ),
-                            ], className="d-flex align-items-center mb-2"),
-                            html.P(
-                                "Sua opinião é importante para melhorarmos o dashboard. "
-                                "Responda a um breve formulário e nos ajude a aprimorar "
-                                "a experiência de uso.",
-                                className="text-muted small mb-0",
-                            ),
-                        ], xs=12, md=9, className="mb-2 mb-md-0"),
-                        dbc.Col(
-                            html.A(
-                                [html.I(className="fas fa-external-link-alt me-1"),
-                                 "Responder"],
-                                href="https://docs.google.com/forms/d/e/1FAIpQLSfCpeKb-VNoTos8n5Pr0mr6wtNt2re8-ZTn94caXqRq-xTwkg/viewform",
-                                target="_blank",
-                                className="btn btn-outline-primary btn-sm",
-                            ),
-                            xs=12, md=3,
-                            className="d-flex align-items-center justify-content-start justify-content-md-end",
+            chart_card(
+                "Avaliação do dashboard",
+                dbc.Row([
+                    dbc.Col(
+                        html.P(
+                            "Sua opinião é importante para melhorarmos o dashboard. "
+                            "Responda a um breve formulário e nos ajude a aprimorar "
+                            "a experiência de uso.",
+                            className="text-muted small mb-0",
                         ),
-                    ], className="align-items-center"),
-                ),
-                style={"borderTop": "3px solid #2b9eb3"},
+                        xs=12, md=9, className="mb-2 mb-md-0",
+                    ),
+                    dbc.Col(
+                        html.A(
+                            [html.I(className="fas fa-external-link-alt me-1"), "Responder"],
+                            href="https://docs.google.com/forms/d/e/1FAIpQLSfCpeKb-VNoTos8n5Pr0mr6wtNt2re8-ZTn94caXqRq-xTwkg/viewform",
+                            target="_blank",
+                            className="btn btn-outline-primary btn-sm",
+                        ),
+                        xs=12, md=3,
+                        className="d-flex align-items-center justify-content-start justify-content-md-end",
+                    ),
+                ], className="align-items-center"),
+                fa_icon="fas fa-poll-h",
+                header_class="geo-header-teal",
             ),
             width=12,
         ), className="mb-3"),
