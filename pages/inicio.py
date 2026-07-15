@@ -71,6 +71,10 @@ _PUBLICACOES = [
 ]
 
 _ACEITOS = [
+    "Revista Brasileira de Geografia, 2026: Lofrano-Porto, B., Gurgel, H., Monteiro dos Santos Junior, D. A, "
+    "Alves, H., Zeilhofer, P., Bezerra, A. B., Lima, E., Santana, E. A., Miranda, M., Libonati, R. "
+    "Fequência, duração e intensidade de ondas de calor em áreas urbanas do Brasil no período de 1981 a 2023.",
+    
     "Revista Estrabão, 2026: Bezerra, AB, Gurgel, H, Santana, EA, Silva, EL, Lofrano-Porto, B. "
     "Ondas de calor e internações por doenças respiratórias na Região Integrada de Desenvolvimento "
     "do Distrito Federal e Entorno.",
