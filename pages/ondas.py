@@ -29,7 +29,8 @@ def nota_tecnica_card() -> dbc.Card:
                     html.P("Excess Heat Factor (Nairn & Fawcett, 2015): "
                            "combina a significância do calor em relação ao "
                            "percentil 95 histórico com a capacidade de "
-                           "aclimatação humana (baseada nos 30 dias anteriores).",
+                           "aclimatação humana (baseada nos 30 dias anteriores)."
+                           "Acesse o  script para o cálculo: https://doi.org/10.5281/zenodo.20830224",
                            className="small text-muted mb-2")
                 ]),
                 html.Div([
