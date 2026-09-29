@@ -33,6 +33,44 @@ APOIADORES = [
 
 _PUBLICACOES = [
     {
+        "img": "revista_brasileira.png",
+        "href": "https://rbg.ibge.gov.br/index.php/rbg/article/view/4735",
+        "ref": (
+            "Porto, B; Gurgel, H; Monteiro dos Santos, D; Alves, H; Zeilhofer, P; Bezerra, A; Lima, E; "
+            "Santana, EA; Miranda, M; Libonati, R. Frequência, duração e intensidade de ondas de calor em "
+            "áreas urbanas do Brasil no período de 1981 a 2023. "
+            "Revista Brasileira de Geografia, v. 71, n. 1, p. 92-113, 2026."
+        ),
+    },
+    {
+        "img": "hygeia.jpeg",
+        "href": "https://seer.ufu.br/index.php/hygeia/article/view/82664",
+        "ref": (
+            "Lima e Silva, E; Gurgel, H; Leal, CM; Porto, BL; Pereira, HA; Bezerra, AB. "
+            "Sistemas de alerta para ondas de calor e saúde: panorama internacional e desafios para "
+            "adaptação do SUS no contexto de mudança do clima. "
+            "Hygeia - Revista Brasileira de Geografia Médica e da Saúde, p. 1-13, 2026."
+        ),
+    },
+    {
+        "img": "geo.jpeg",
+        "href": "https://geoconexoesonline.com/revista/article/view/206",
+        "ref": (
+            "Lima e Silva, E; Gurgel, H; Santana, EA; Sá, IAJG; Oliveira, LF. "
+            "Ondas de calor e saúde: panorama da produção científica e caracterização dos grupos de "
+            "pesquisa na América Latina. Geoconexões Online, v. 6, n. 2, p. 50-71, 2026."
+        ),
+    },
+    {
+        "img": "ciencia.jpeg",
+        "href": "https://cienciaesaudecoletiva.com.br/artigos/sistemas-de-alerta-para-ondas-de-calor-revisao-de-escopo-como-subsidio-a-adaptacao-do-sus-a-mudanca-do-clima/20153",
+        "ref": (
+            "Silva, EL; Gurgel, H; Bezerra, AB; Santana, EA; Leal, CM; Porto, BL; Zeilhofer, P. "
+            "Sistemas de alerta para ondas de calor: revisão de escopo como subsídio à adaptação do SUS "
+            "à mudança do clima. Cien Saude Colet, 2026."
+        ),
+    },
+    {
         "img": "Bezerra_artigo.png",
         "href": "http://cienciaesaudecoletiva.com.br/artigos/ondas-de-calor-e-saude-humana-revisao-de-escopo-dos-codigos-cid10-para-mortalidade-e-morbidade/19937?id=19937",
         "ref": (
@@ -71,10 +109,6 @@ _PUBLICACOES = [
 ]
 
 _ACEITOS = [
-    "Revista Brasileira de Geografia, 2026: Lofrano-Porto, B., Gurgel, H., Monteiro dos Santos Junior, D. A, "
-    "Alves, H., Zeilhofer, P., Bezerra, A. B., Lima, E., Santana, E. A., Miranda, M., Libonati, R. "
-    "Fequência, duração e intensidade de ondas de calor em áreas urbanas do Brasil no período de 1981 a 2023.",
-    
     "Revista Estrabão, 2026: Bezerra, AB, Gurgel, H, Santana, EA, Silva, EL, Lofrano-Porto, B. "
     "Ondas de calor e internações por doenças respiratórias na Região Integrada de Desenvolvimento "
     "do Distrito Federal e Entorno.",
@@ -162,7 +196,7 @@ _SECOES = [
         "icon": "fas fa-thermometer-half",
         "href": "/temperaturas",
         "titulo": "Caracterização climática",
-        "desc": "Temperaturas médias, anomalias e sazonalidade nas 15 RMB de 1981 a 2023.",
+        "desc": "Temperaturas médias, anomalias e sazonalidade nas 15 RMB de 1981 a 2025.",
         "cor": "#1761a0",
         "pos": "center center",
     },
@@ -337,7 +371,7 @@ def layout_inicio(app):
                         "perfil epidemiológico e sistemas de alerta, permitindo visualizar padrões, "
                         "identificar anomalias e apoiar o monitoramento, a comunicação de risco e "
                         "o planejamento de ações em saúde, com o objetivo de gerar evidências "
-                        "científicas e subsidiar a atuação do Sistema Único de Saúde — SUS.",
+                        "científicas e subsidiar a atuação do Sistema Único de Saúde (SUS).",
                         className="mb-0 text-muted",
                     ),
                 ]),

@@ -91,6 +91,11 @@ def _fig_oer(df: pd.DataFrame) -> go.Figure:
 
     fig.add_hline(y=1.0, line_dash="dash", line_color="black", line_width=1.2)
 
+    # Faixa X dinâmica (era fixa em 1999–2024 e cortava os anos mais recentes
+    # assim que a base passou a ter ondas até 2025).
+    x_min = df["inicio_onda"].min() - pd.Timedelta(days=180)
+    x_max = df["fim_onda"].max() + pd.Timedelta(days=180)
+
     layout = {
         **_LAYOUT_BASE,
         "legend": dict(
@@ -100,7 +105,7 @@ def _fig_oer(df: pd.DataFrame) -> go.Figure:
             xanchor="right", x=1,
         ),
         "xaxis": dict(title="", gridcolor="#eee",
-                      range=["1999-07-01", "2024-01-01"]),
+                      range=[x_min, x_max]),
         "yaxis": dict(title="O/E ratio", gridcolor="#eee",
                       zeroline=False, range=[y_min, y_max]),
     }
@@ -328,10 +333,18 @@ def _nota_tecnica_card() -> dbc.Card:
 
 # ── Layout ────────────────────────────────────────────────────────────────────
 
+def _marks_periodo(ano_min: int, ano_max: int) -> dict:
+    m = {y: str(y) for y in range(ano_min, ano_max + 1, 5)}
+    m[ano_min] = str(ano_min)
+    m[ano_max] = str(ano_max)
+    return m
+
+
 def layout_mortalidade(app):
     cidades = dm.cidades_disponiveis()
     default = "Brasília" if "Brasília" in cidades else (cidades[0] if cidades else None)
     opts = [{"label": c, "value": c} for c in cidades]
+    ano_min, ano_max = dm.anos_disponiveis()
 
     return dbc.Container([
         # ── Cabeçalho ─────────────────────────────────────────────────────────
@@ -376,6 +389,18 @@ def layout_mortalidade(app):
                         ),
                     ], xs=12, md=3),
                 ], className="g-2 align-items-end"),
+                html.Div([
+                    html.Label("Período (ano de início da onda)",
+                               className="small fw-semibold text-muted mb-1 d-block"),
+                    dcc.RangeSlider(
+                        id="mort-periodo",
+                        min=ano_min, max=ano_max, step=1,
+                        value=[ano_min, ano_max],
+                        marks=_marks_periodo(ano_min, ano_max),
+                        allowCross=False,
+                        tooltip={"placement": "bottom", "always_visible": False},
+                    ),
+                ], className="mt-3"),
             ])
         ], className="shadow-sm border-0 mb-4"),
 
@@ -471,11 +496,14 @@ def register_callbacks_mortalidade(app):
         Output("mort-oer-graph", "figure"),
         Output("mort-oer-note", "children"),
         Input("mort-cidade", "value"),
+        Input("mort-periodo", "value"),
     )
-    def _update_oer(cidade):
+    def _update_oer(cidade, periodo):
         if not cidade:
             return _EMPTY, ""
         df = dm.oer_por_cidade(cidade)
+        if periodo and len(periodo) == 2 and not df.empty:
+            df = df[df["ano_onda"].between(periodo[0], periodo[1])]
         n_sig = int(df["OER_isSIG"].sum()) if not df.empty else 0
         n_exc = int((df["OER_isSIG"] & (df["OER"] >= 1)).sum()) if not df.empty else 0
         note = chart_note(
@@ -518,8 +546,9 @@ def register_callbacks_mortalidade(app):
     @app.callback(
         Output("mort-all-container", "children"),
         Input("mort-modo",           "data"),
+        Input("mort-periodo",        "value"),
     )
-    def _update_all(modo):
+    def _update_all(modo, periodo):
         if modo != "all":
             return []
         cidades = dm.cidades_disponiveis()
@@ -527,6 +556,8 @@ def register_callbacks_mortalidade(app):
         for i, cidade in enumerate(cidades):
             graph_id = f"mort-oer-all-{i}"
             df = dm.oer_por_cidade(cidade)
+            if periodo and len(periodo) == 2 and not df.empty:
+                df = df[df["ano_onda"].between(periodo[0], periodo[1])]
             fig = _fig_oer(df)
             card = html.Div([
                 html.H6(cidade, style={"display": "none"}),

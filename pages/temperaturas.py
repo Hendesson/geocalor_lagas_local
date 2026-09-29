@@ -21,7 +21,7 @@ _GEOJSON_PATH = os.path.join(ASSETS_DIR, "geojson_rmb.json")
 def _popup_estacao(cidade, lat, lon, n_reg, y_min, y_max):
     return f"""
     <div style="font-family:Arial,sans-serif;min-width:220px;">
-      <div style="background:linear-gradient(90deg,#1761a0,#2b9eb3);color:#fff;
+      <div style="background:#1761a0;color:#fff;
                   font-weight:700;padding:8px 12px;border-radius:6px 6px 0 0;font-size:13px;">
         {cidade}
       </div>
@@ -89,8 +89,8 @@ def chart_note(texto: str) -> html.P:
 def nota_tecnica_card() -> dbc.Card:
     return dbc.Card([
         dbc.CardBody([
-            html.H5([html.I(className="fas fa-file-alt me-2"), "Nota Técnica"],
-                    className="card-title mb-3"),
+            html.H3([html.I(className="fas fa-file-alt me-2"), "Nota Técnica"],
+                    className="card-title mb-3", style={"fontSize": "1.05rem"}),
             html.P(
                 "Acesse a documentação completa da metodologia utilizada "
                 "nesta página do dashboard, incluindo cálculos de amplitude "
@@ -109,7 +109,7 @@ def nota_tecnica_card() -> dbc.Card:
                     href="/nota-tecnica-temperaturas",
                     target="_blank",
                     className="btn btn-outline-secondary btn-sm",
-                    title="Abrirá em nova aba — use Ctrl+P para salvar como PDF"
+                    title="Abrirá em nova aba (use Ctrl+P para salvar como PDF)"
                 ),
             ], className="d-flex flex-wrap gap-2")
         ])
@@ -184,7 +184,7 @@ def layout_temperaturas(app, df, cidades, anos):
                             href="/mapa-estacoes",
                             target="_blank",
                             className="btn-download-asset mb-2",
-                            title="Abre o mapa em tela cheia — use Ctrl+P para salvar como PDF",
+                            title="Abre o mapa em tela cheia (use Ctrl+P para salvar como PDF)",
                         ),
                         html.Iframe(
                             src="/mapa-estacoes",

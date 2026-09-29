@@ -34,8 +34,8 @@ def _nota(texto: str) -> html.P:
 
 
 SISTEMA_OPTS = [
-    {"label": "SIH — Internações hospitalares", "value": "SIH"},
-    {"label": "SIM — Óbitos",                   "value": "SIM"},
+    {"label": "SIH: Internações hospitalares", "value": "SIH"},
+    {"label": "SIM: Óbitos",                   "value": "SIM"},
 ]
 CAUSA_OPTS = [
     {"label": "Doenças cardiovasculares", "value": "CARDIOVASCULAR"},
@@ -44,6 +44,13 @@ CAUSA_OPTS = [
 
 _SISTEMA_DEFAULT = "SIH"
 _CAUSA_DEFAULT   = "CARDIOVASCULAR"
+
+
+def _marks_periodo(ano_min: int, ano_max: int) -> dict:
+    m = {y: str(y) for y in range(ano_min, ano_max + 1, 4)}
+    m[ano_min] = str(ano_min)
+    m[ano_max] = str(ano_max)
+    return m
 
 
 # ── figuras auxiliares ──────────────────────────────────────────────────────
@@ -89,7 +96,7 @@ def layout_sih_sim(app) -> dbc.Container:
                 [
                     html.Div(
                         [html.I(className="fas fa-chart-bar me-2"),
-                         "Explorar dados — escolha uma visualização:"],
+                         "Explorar dados: escolha uma visualização"],
                         className="fw-bold mb-3",
                         style={"fontSize": "1.05rem"},
                     ),
@@ -172,13 +179,13 @@ def layout_sih_sim(app) -> dbc.Container:
             # ── Nota Técnica ──────────────────────────────────────────────
             dbc.Card(
                 dbc.CardBody([
-                    html.H5([html.I(className="fas fa-file-alt me-2"), "Nota Técnica"],
-                            className="card-title mb-3"),
+                    html.H3([html.I(className="fas fa-file-alt me-2"), "Nota Técnica"],
+                            className="card-title mb-3", style={"fontSize": "1.05rem"}),
                     html.P(
                         "Dados do Sistema de Informações Hospitalares (SIH) e do "
                         "Sistema de Informações sobre Mortalidade (SIM), "
                         "disponibilizados pelo DATASUS/MS. "
-                        "Cobre o período de 2010 a 2022 (SIH) e 2010 a 2023 (SIM) "
+                        "Cobre o período de 2010 a 2025 (SIH e SIM) "
                         "para 15 Regiões Metropolitanas brasileiras. "
                         "Causas classificadas pelo CID-10: doenças cardiovasculares "
                         "(Cap. IX, I00–I99) e respiratórias (Cap. X, J00–J99). "
@@ -198,7 +205,7 @@ def layout_sih_sim(app) -> dbc.Container:
                             href="/nota-tecnica-sih-sim",
                             target="_blank",
                             className="btn btn-outline-secondary btn-sm",
-                            title="Abrirá em nova aba — use Ctrl+P para salvar como PDF",
+                            title="Abrirá em nova aba (use Ctrl+P para salvar como PDF)",
                         ),
                     ], className="d-flex flex-wrap gap-2"),
                 ]),
@@ -212,9 +219,37 @@ def layout_sih_sim(app) -> dbc.Container:
     )
 
 
-def _tab_infograficos() -> dbc.Container:
+def _tab_infograficos(ano_min: int = None, ano_max: int = None) -> dbc.Container:
+    _tem_periodo = ano_min is not None and ano_max is not None and ano_min < ano_max
     return dbc.Container(
         [
+            # ── Filtro de período — aplica-se a todos os infográficos abaixo ──
+            dbc.Row(dbc.Col(
+                dbc.Card(
+                    [
+                        html.Div(
+                            [html.I(className="fas fa-calendar-alt me-2"), "Período de Análise"],
+                            className="geo-map-section-header",
+                        ),
+                        dbc.CardBody(
+                            dcc.RangeSlider(
+                                id="sihsim-periodo",
+                                min=ano_min or 2010, max=ano_max or 2025, step=1,
+                                value=[ano_min or 2010, ano_max or 2025],
+                                marks=_marks_periodo(ano_min, ano_max) if _tem_periodo else {},
+                                allowCross=False,
+                                tooltip={"placement": "bottom", "always_visible": False},
+                            ) if _tem_periodo else dcc.RangeSlider(
+                                id="sihsim-periodo", min=2010, max=2025, step=1,
+                                value=[2010, 2025], disabled=True,
+                            ),
+                        ),
+                    ],
+                    className="shadow-sm border-0 mb-4",
+                ),
+                width=12,
+            )),
+
             # 1-2: Caráter de internação | Especialidade do leito
             dbc.Row(
                 [
@@ -280,7 +315,7 @@ def _tab_infograficos() -> dbc.Container:
                 chart_card(
                     "Série temporal mensal por ano",
                     [dcc.Loading(dcc.Graph(id="sihsim-g4b"), type="circle"),
-                     _nota("Número absoluto de casos por mês — cada painel corresponde a um ano. "
+                     _nota("Número absoluto de casos por mês. Cada painel corresponde a um ano. "
                            "Linhas tracejadas: limiares de risco calculados por quintis do volume mensal "
                            "(sem risco → segurança → baixo → moderado → alto)."),
                      dl_btn("sihsim-g4b", "serie_temporal_mensal_ano")],
@@ -294,8 +329,8 @@ def _tab_infograficos() -> dbc.Container:
                 chart_card(
                     "Taxa mensal por ano (por 10.000 hab.)",
                     [dcc.Loading(dcc.Graph(id="sihsim-g4c"), type="circle"),
-                     _nota("Taxa mensal por 10.000 habitantes — barras cinzas, cada painel "
-                           "corresponde a um ano (3 colunas por linha). "
+                     _nota("Taxa mensal por 10.000 habitantes: barras cinzas, cada painel "
+                           "corresponde a um ano (5 colunas por linha). "
                            "Eixo X: mês; eixo Y: taxa por 10.000 hab."),
                      dl_btn("sihsim-g4c", "taxa_mensal_ano")],
                     fa_icon="fas fa-chart-line",
@@ -306,7 +341,7 @@ def _tab_infograficos() -> dbc.Container:
             # 9: Sazonalidade mensal — mapa de calor (ano × mês)
             dbc.Row(dbc.Col(
                 chart_card(
-                    "Sazonalidade mensal — mapa de calor (ano × mês)",
+                    "Sazonalidade mensal: mapa de calor por ano e mês",
                     [dcc.Loading(
                         dcc.Graph(id="sihsim-g4", style={"height": "clamp(280px, 52vw, 440px)"}),
                         type="circle",
@@ -466,14 +501,17 @@ def register_callbacks_sih_sim(app) -> None:
         State("sihsim-rm",           "value"),
     )
     def _render_tab(active_tab, sistema, causa, rm):
+        s = sistema or _SISTEMA_DEFAULT
+        c = causa   or _CAUSA_DEFAULT
         if active_tab == "mapa":
-            s = sistema or _SISTEMA_DEFAULT
-            c = causa   or _CAUSA_DEFAULT
             anos  = ds.anos_disponiveis(s, c, rm) if rm else []
             opts  = [{"label": str(a), "value": a} for a in anos]
             init  = anos[-1] if anos else None
             return _tab_mapa(opts, init)
-        return _tab_infograficos()
+        anos = ds.anos_disponiveis(s, c, rm) if rm else []
+        ano_min = min(anos) if anos else None
+        ano_max = max(anos) if anos else None
+        return _tab_infograficos(ano_min, ano_max)
 
     @app.callback(
         Output("sihsim-rm", "options"),
@@ -499,6 +537,29 @@ def register_callbacks_sih_sim(app) -> None:
         anos = ds.anos_disponiveis(sistema or "SIH", causa or "CARDIOVASCULAR", rm)
         opts = [{"label": str(a), "value": a} for a in anos]
         return opts, (anos[-1] if anos else None)
+
+    # ── Atualiza limites do slider de período ao trocar sistema/causa/RM ──
+    @app.callback(
+        Output("sihsim-periodo", "min"),
+        Output("sihsim-periodo", "max"),
+        Output("sihsim-periodo", "value"),
+        Output("sihsim-periodo", "marks"),
+        Output("sihsim-periodo", "disabled"),
+        Input("sihsim-sistema", "value"),
+        Input("sihsim-causa",   "value"),
+        Input("sihsim-rm",      "value"),
+        prevent_initial_call=True,
+    )
+    def _update_periodo_infograficos(sistema, causa, rm):
+        if not rm:
+            return 2010, 2025, [2010, 2025], {}, True
+        anos = ds.anos_disponiveis(sistema or _SISTEMA_DEFAULT, causa or _CAUSA_DEFAULT, rm)
+        if not anos:
+            return 2010, 2025, [2010, 2025], {}, True
+        ano_min, ano_max = min(anos), max(anos)
+        if ano_min >= ano_max:
+            return ano_min, ano_min + 1, [ano_min, ano_min + 1], {ano_min: str(ano_min)}, True
+        return ano_min, ano_max, [ano_min, ano_max], _marks_periodo(ano_min, ano_max), False
 
     app.clientside_callback(
         """
@@ -544,8 +605,9 @@ def register_callbacks_sih_sim(app) -> None:
         Input("sihsim-sistema", "value"),
         Input("sihsim-causa",   "value"),
         Input("sihsim-rm",      "value"),
+        Input("sihsim-periodo", "value"),
     )
-    def _update_graficos(sistema, causa, rm):
+    def _update_graficos(sistema, causa, rm, periodo_val):
         _vazio9 = ["—", "—", _empty(), _empty(), _empty(), _empty(), _empty(), _empty(), _empty(), _empty(), _empty()]
         _t_default = (
             [html.I(className="fas fa-hospital me-2"),   "—"],
@@ -553,6 +615,8 @@ def register_callbacks_sih_sim(app) -> None:
         )
         if not rm or not sistema or not causa:
             return (*_t_default, *_vazio9)
+
+        periodo = tuple(periodo_val) if periodo_val and len(periodo_val) == 2 else None
 
         ano_col      = ds._ANO_COL[sistema]
         mes_col      = ds._MES_COL[sistema]
@@ -578,15 +642,15 @@ def register_callbacks_sih_sim(app) -> None:
 
         # ── G1 / G2 — específico por sistema ─────────────────────────────
         if sistema == "SIH":
-            t1, icon1, df_g1 = "Caráter de internação",  "fas fa-ambulance",  ds.car_int(causa, rm)
-            t2, icon2, df_g2 = "Especialidade do leito", "fas fa-procedures", ds.espec(causa, rm)
+            t1, icon1, df_g1 = "Caráter de internação",  "fas fa-ambulance",  ds.car_int(causa, rm, periodo)
+            t2, icon2, df_g2 = "Especialidade do leito", "fas fa-procedures", ds.espec(causa, rm, periodo)
             note1 = ("Tipo de admissão: Eletivo (internação programada) ou Urgência/Emergência "
                      "(admissão não planejada por condição aguda).")
             note2 = ("Top 12 especialidades de leito nas internações. Inclui leitos clínicos, "
                      "cirúrgicos, pediátricos, UTI adulto e UTI coronariana.")
         else:
-            t1, icon1, df_g1 = "Local do óbito",   "fas fa-map-marker-alt", ds.lococor(causa, rm)
-            t2, icon2, df_g2 = "Estado civil",      "fas fa-ring",           ds.estciv(causa, rm)
+            t1, icon1, df_g1 = "Local do óbito",   "fas fa-map-marker-alt", ds.lococor(causa, rm, periodo)
+            t2, icon2, df_g2 = "Estado civil",      "fas fa-ring",           ds.estciv(causa, rm, periodo)
             note1 = ("Local de ocorrência do óbito: Hospital, Domicílio, Via pública ou "
                      "Outro estabelecimento de saúde.")
             note2 = ("Estado civil autodeclarado na Declaração de Óbito. Indicador de "
@@ -634,7 +698,7 @@ def register_callbacks_sih_sim(app) -> None:
             g2.update_layout(margin=dict(l=160, r=20, t=40, b=40))
 
         # ── G3 — raça/cor ─────────────────────────────────────────────────
-        df3 = ds.raca_cor(sistema, causa, rm)
+        df3 = ds.raca_cor(sistema, causa, rm, periodo)
         if df3.empty:
             g3 = _empty("Sem dados de raça/cor")
         else:
@@ -650,7 +714,7 @@ def register_callbacks_sih_sim(app) -> None:
         # + geom_hline com limiares por quebras naturais (quintis do N mensal)
         _LIMIAR_NOMES  = ["Sem risco", "Segurança", "Baixo",   "Moderado", "Alto"]
         _LIMIAR_CORES  = ["#000099",   "#009900",   "#FFD166", "#ff8000",  "#cc0000"]
-        df4b = ds.serie_mensal(sistema, causa, rm)
+        df4b = ds.serie_mensal(sistema, causa, rm, periodo)
         if df4b.empty:
             g4b = _empty("Sem série temporal disponível", height=300)
         else:
@@ -747,7 +811,7 @@ def register_callbacks_sih_sim(app) -> None:
                 _ann.font = dict(size=9, color=PRIMARY)
 
         # ── G4 — mapa de calor ano × mês ─────────────────────────────────
-        df4 = ds.serie_mensal(sistema, causa, rm)
+        df4 = ds.serie_mensal(sistema, causa, rm, periodo)
         if df4.empty:
             g4 = _empty("Sem série temporal disponível", height=400)
         else:
@@ -784,9 +848,9 @@ def register_callbacks_sih_sim(app) -> None:
 
         # ── G4c — taxa mensal por 10.000 hab. facetada por ano (grafico6 do R) ──
         # geom_bar(fill="grey") + facet_wrap(~ ANO_OBITO, ncol=3) + taxa = N/pop*10000
-        df4c = ds.serie_mensal_taxa(sistema, causa, rm)
+        df4c = ds.serie_mensal_taxa(sistema, causa, rm, periodo)
         if df4c.empty or df4c["taxa"].isna().all():
-            g4c = _empty("Taxa mensal indisponível — verifique populacao_RM.parquet", height=300)
+            g4c = _empty("Taxa mensal indisponível: verifique populacao_RM.parquet", height=300)
         else:
             _d4c = df4c.dropna(subset=["taxa"]).copy()
             _d4c["MES_NUM"] = pd.to_numeric(_d4c[mes_col], errors="coerce")
@@ -796,7 +860,10 @@ def register_callbacks_sih_sim(app) -> None:
 
             anos4c  = sorted(monthly4c["ANO_NUM"].unique())
             n4c     = len(anos4c)
-            ncols4c = min(3, n4c)          # facet_wrap(ncol=3) do R
+            # 5 colunas em vez das 3 do facet_wrap original do R: mesma
+            # legibilidade dos rótulos de mês (ainda cabem em 45°), mas
+            # ~40% menos altura de scroll pra encontrar um ano fora do padrão.
+            ncols4c = min(5, n4c)
             nrows4c = math.ceil(n4c / ncols4c) if n4c else 1
 
             g4c = make_subplots(
@@ -848,9 +915,9 @@ def register_callbacks_sih_sim(app) -> None:
                 _ann.font = dict(size=10, color=PRIMARY)
 
         # ── G5 — taxa anual ───────────────────────────────────────────────
-        df5 = ds.taxa_anual(sistema, causa, rm)
+        df5 = ds.taxa_anual(sistema, causa, rm, periodo)
         if df5.empty or df5["taxa"].isna().all():
-            g5 = _empty("Taxa indisponível — verifique populacao_RM.parquet")
+            g5 = _empty("Taxa indisponível: verifique populacao_RM.parquet")
         else:
             df5p = df5.dropna(subset=["taxa"])
             g5 = px.bar(df5p, x=ano_col, y="taxa",
@@ -866,9 +933,9 @@ def register_callbacks_sih_sim(app) -> None:
             "1": "Masculino", "M": "Masculino", "Masculino": "Masculino",
             "2": "Feminino",  "F": "Feminino",  "Feminino": "Feminino",
         }
-        df6 = ds.sexo_por_faixa(sistema, causa, rm)
+        df6 = ds.sexo_por_faixa(sistema, causa, rm, periodo)
         if df6.empty:
-            g6 = _empty("Sem dados disponíveis — execute prepare_sih_sim_data.py para gerar o parquet de pirâmide.")
+            g6 = _empty("Sem dados disponíveis: execute prepare_sih_sim_data.py para gerar o parquet de pirâmide.")
         else:
             df6 = df6.copy()
             df6["SEXO"] = df6["SEXO"].astype(str).map(_smap)
@@ -940,7 +1007,7 @@ def register_callbacks_sih_sim(app) -> None:
                 )
 
         # ── G7 — faixa etária ─────────────────────────────────────────────
-        df7 = ds.faixa_etaria(sistema, causa, rm)
+        df7 = ds.faixa_etaria(sistema, causa, rm, periodo)
         if df7.empty:
             g7 = _empty("Sem dados de faixa etária")
         else:
@@ -1086,7 +1153,7 @@ def register_callbacks_sih_sim(app) -> None:
 
         # ── Modo "Todos os anos" ──────────────────────────────────────────────
         if modo == "all":
-            titulo = f"Todos os anos — taxa de {label_evento} por doenças {label_causa} — {rm}"
+            titulo = f"Todos os anos: taxa de {label_evento} por doenças {label_causa} ({rm})"
 
             _fig_key = (sistema, causa, rm)
             if _fig_key in _mapa_all_figs_cache:
@@ -1099,7 +1166,7 @@ def register_callbacks_sih_sim(app) -> None:
                 return [dcc.Graph(figure=_empty("Sem dados disponíveis", 400))], titulo, aviso
             if all_years_data.get("no_overlap"):
                 aviso = (
-                    "Atenção — Mapa indisponível para SIM nesta RM: CODMUNRES (residência) não coincide "
+                    "Atenção: mapa indisponível para SIM nesta RM. CODMUNRES (residência) não coincide "
                     "com os municípios da RM. Corrija o prepare_sih_sim_data.py para usar CODMUNOCOR."
                 )
                 return [dcc.Graph(figure=_empty(
@@ -1143,7 +1210,7 @@ def register_callbacks_sih_sim(app) -> None:
             return children, titulo, aviso
 
         # ── Modo ano único ────────────────────────────────────────────────────
-        titulo = f"Taxa de {label_evento} por doenças {label_causa} por 1.000 hab. — {rm} ({ano})"
+        titulo = f"Taxa de {label_evento} por doenças {label_causa} por 1.000 hab., {rm} ({ano})"
         data   = ds.mapa_data(sistema, causa, rm, int(ano))
         if data is None:
             aviso = (
@@ -1154,7 +1221,7 @@ def register_callbacks_sih_sim(app) -> None:
 
         if data.get("no_overlap"):
             aviso = (
-                "Atenção — Mapa indisponível para SIM nesta RM: o parquet foi gerado com CODMUNRES "
+                "Atenção: mapa indisponível para SIM nesta RM. O parquet foi gerado com CODMUNRES "
                 "(município de residência do falecido), que não coincide com os municípios desta RM. "
                 "Para corrigir, inclua CODMUNOCOR no prepare_sih_sim_data.py."
             )

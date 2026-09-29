@@ -11,7 +11,7 @@ import calendar
 from datetime import date
 
 from components import chart_card, info_card, dd, dl_btn
-from config import LAYOUT_BASE, WHITE
+from config import LAYOUT_BASE, WHITE, YEAR_MAX
 
 
 def chart_note(texto: str) -> html.P:
@@ -21,21 +21,20 @@ def chart_note(texto: str) -> html.P:
 def nota_tecnica_card() -> dbc.Card:
     return dbc.Card([
         dbc.CardBody([
-            html.H5([html.I(className="fas fa-file-alt me-2"), "Nota Técnica"],
-                    className="card-title mb-3"),
+            html.H3([html.I(className="fas fa-file-alt me-2"), "Nota Técnica"],
+                    className="card-title mb-3", style={"fontSize": "1.05rem"}),
             html.Div([
                 html.Div([
                     html.Strong("Metodologia EHF"),
                     html.P("Excess Heat Factor (Nairn & Fawcett, 2015): "
                            "combina a significância do calor em relação ao "
                            "percentil 95 histórico com a capacidade de "
-                           "aclimatação humana (baseada nos 30 dias anteriores)."
-                           "Acesse o  script para o cálculo: https://doi.org/10.5281/zenodo.20830224",
+                           "aclimatação humana (baseada nos 30 dias anteriores).",
                            className="small text-muted mb-2")
                 ]),
                 html.Div([
                     html.Strong("Classificação"),
-                    html.P("Baixa Intensidade • Severa • Extrema — "
+                    html.P("Baixa Intensidade • Severa • Extrema: "
                            "definidas a partir de múltiplos do percentil 85 (EHF85) "
                            "de todos os valores positivos do EHF.",
                            className="small text-muted mb-3")
@@ -61,8 +60,8 @@ def nota_tecnica_card() -> dbc.Card:
 def layout_ondas(app, df, cidades, anos):
     cidade_opts   = [{"label": c, "value": c} for c in cidades]
     cidade_default = "Brasília" if "Brasília" in cidades else (cidades[0] if cidades else None)
-    anos_opts     = [{"label": str(a), "value": a} for a in anos if a <= 2023]
-    ano_default   = min(anos[-1], 2023) if anos else None
+    anos_opts     = [{"label": str(a), "value": a} for a in anos if a <= YEAR_MAX]
+    ano_default   = min(anos[-1], YEAR_MAX) if anos else None
 
     return dbc.Container([
 
@@ -135,7 +134,7 @@ def layout_ondas(app, df, cidades, anos):
             # Esquerda (principal): Ano Selecionado — controla cidade e ano de toda a página
             dbc.Col(
                 chart_card(
-                    "Dias de OC por Mês — Ano Selecionado",
+                    "Dias de OC por Mês (Ano Selecionado)",
                     [
                         dbc.Row([
                             dbc.Col(
@@ -161,12 +160,12 @@ def layout_ondas(app, df, cidades, anos):
             # Direita: Período Completo — segue a cidade selecionada à esquerda
             dbc.Col(
                 chart_card(
-                    "Dias de OC por Mês — Período Completo",
+                    "Dias de OC por Mês (Período Completo)",
                     [
                         dcc.Loading(dcc.Graph(id="grafico-polar-total"), type="circle"),
                         chart_note(
                             "Frequência mensal acumulada de dias de Ondas de Calor "
-                            "ao longo de todo o período histórico (1981–2023). "
+                            f"ao longo de todo o período histórico (1981–{YEAR_MAX}). "
                             "Acompanha a cidade selecionada ao lado."
                         ),
                         dl_btn("grafico-polar-total", "polar_oc_periodo_completo"),
@@ -212,8 +211,10 @@ def layout_ondas(app, df, cidades, anos):
                 dcc.Loading(dcc.Graph(id="grafico-temp-hw"), type="circle"),
                 chart_note(
                     "Série temporal de temperaturas máxima, média e mínima diárias. "
-                    "As faixas laranjas indicam os dias classificados como Onda de Calor "
-                    "(EHF > 0 por ≥ 3 dias consecutivos). Marcadores 'Pico' = Percentil 95."
+                    "As faixas coloridas indicam os dias classificados como Onda de Calor "
+                    "(EHF > 0 por ≥ 3 dias consecutivos), com a cor marcando a intensidade: "
+                    "laranja (Baixa), vermelho (Severa) ou vermelho-escuro (Extrema). "
+                    "Marcadores 'Pico' = Percentil 95."
                 ),
                 dl_btn("grafico-temp-hw", "temperatura_ondas_calor"),
             ],
@@ -239,8 +240,9 @@ def layout_ondas(app, df, cidades, anos):
             [
                 dcc.Loading(dcc.Graph(id="grafico-umidade-hw"), type="circle"),
                 chart_note(
-                    "Umidade relativa (%). Faixas laranjas com opacidade proporcional "
-                    "à intensidade da OC: baixa, severa e extrema."
+                    "Umidade relativa (%). Faixas coloridas marcam dias de onda de calor, "
+                    "com a cor indicando a intensidade: laranja (Baixa), vermelho (Severa) "
+                    "ou vermelho-escuro (Extrema)."
                 ),
                 dl_btn("grafico-umidade-hw", "umidade_ondas_calor"),
             ],
@@ -250,7 +252,7 @@ def layout_ondas(app, df, cidades, anos):
         html.Br(),
         dbc.Card([
             html.Div(
-                [html.I(className="fas fa-map me-2"), "Mapa de Temperatura Extrema 1981-2023"],
+                [html.I(className="fas fa-map me-2"), f"Mapa de Temperatura Extrema 1981-{YEAR_MAX}"],
                 className="geo-map-section-header",
             ),
             dbc.CardBody([
@@ -298,7 +300,7 @@ def layout_ondas(app, df, cidades, anos):
         html.Br(),
 
         chart_card(
-            "Frequência de Ondas de Calor por Ano e Cidade (1981-2023)",
+            f"Frequência de Ondas de Calor por Ano e Cidade (1981-{YEAR_MAX})",
             [
                 dbc.Row([
                     dbc.Col([
@@ -335,7 +337,8 @@ def layout_ondas(app, df, cidades, anos):
                             dbc.Col(dbc.Button(html.I(className="fas fa-chevron-left"),
                                                id="prev-year-map-button", color="primary"),
                                     width=2, className="d-flex justify-content-end align-items-center"),
-                            dbc.Col(html.H4(id="current-map-year", className="text-center mb-0"),
+                            dbc.Col(html.H3(id="current-map-year", className="text-center mb-0",
+                                            style={"fontSize": "1.3rem"}),
                                     width=8, className="d-flex justify-content-center align-items-center"),
                             dbc.Col(dbc.Button(html.I(className="fas fa-chevron-right"),
                                                id="next-year-map-button", color="primary"),
@@ -375,7 +378,7 @@ def layout_ondas(app, df, cidades, anos):
                     className="btn-download-asset",
                 ),
                 dcc.Store(id='current-year-map-index', data=0),
-                dcc.Store(id='year-map-list', data=[str(y) for y in sorted(anos) if 2010 <= y <= 2023]),
+                dcc.Store(id='year-map-list', data=[str(y) for y in sorted(anos) if 2010 <= y <= YEAR_MAX]),
             ]),
         ], className="mb-5 shadow-sm border-0"),
 
@@ -401,15 +404,15 @@ def layout_ondas(app, df, cidades, anos):
         dbc.Card([
             html.Div(
                 [html.I(className="fas fa-map-pin me-2"),
-                 "Mapa de Ondas de Calor — Todas as Intensidades"],
+                 "Mapa de Ondas de Calor (Todas as Intensidades)"],
                 className="geo-map-section-header",
             ),
             dbc.CardBody([
                 html.P(
                     "Estações meteorológicas das Regiões Metropolitanas. "
-                    "Cada marcador representa uma estação — clique para ver "
+                    "Cada marcador representa uma estação; clique para ver "
                     "estatísticas de Baixa Intensidade, Severa e Extrema "
-                    "registradas no período 1981–2023.",
+                    f"registradas no período 1981–{YEAR_MAX}.",
                     className="text-muted small mb-3",
                 ),
                 html.A(
@@ -480,7 +483,7 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
         }
 
         header = html.Div([
-            html.H4(f"{month_name} {ano}", className="text-center mb-3"),
+            html.H3(f"{month_name} {ano}", className="text-center mb-3", style={"fontSize": "1.1rem", "border": "none"}),
             html.Div([
                 html.Div(d, className="text-center fw-bold")
                 for d in ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
@@ -523,12 +526,10 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
                                               style={"fontSize": "0.85rem",
                                                      "fontWeight": "700",
                                                      "lineHeight": "1"}),
-                                    html.Span(abbr,
-                                              style={"fontSize": "0.52rem",
-                                                     "fontWeight": "600",
+                                    html.Span(abbr, className="calendar-day-abbr",
+                                              style={"fontWeight": "700",
                                                      "lineHeight": "1",
-                                                     "opacity": "0.9",
-                                                     "letterSpacing": "0.03em"}),
+                                                     "letterSpacing": "0.02em"}),
                                 ], style={"display": "flex", "flexDirection": "column",
                                           "alignItems": "center", "gap": "1px"}),
                                 id={"type": "calendar-day", "index": f"{ano}-{mes}-{day}"},
@@ -720,7 +721,7 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
             },
             xaxis=dict(
                 title="Ano",
-                range=[1980.5, 2024.5],
+                range=[1980.5, YEAR_MAX + 0.5],
                 dtick=5,
                 showgrid=True,
                 gridcolor="rgba(0,0,0,0.07)",
@@ -804,7 +805,7 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
         ticks = list(range(int(-(max_abs // step + 1) * step),
                            int((max_abs // step + 2) * step), step))
         fig.update_layout(
-            title=f"EHF Diário — {cidade}, {ano}",
+            title=f"EHF Diário: {cidade}, {ano}",
             xaxis_title="Data", yaxis_title="EHF (°C²)",
             yaxis=dict(tickvals=ticks, zeroline=True, zerolinecolor="red"),
             legend=dict(orientation="h"),
@@ -838,14 +839,14 @@ def register_callbacks_ondas(app, df, _cidades, _anos, data_processor, visualize
             data_hm = data_processor.prepare_heatmap_events_data()
             is_dias = False
             is_ev = True
-            title = "Frequência de Eventos de Ondas de Calor por Ano e Cidade (1981-2023)"
+            title = f"Frequência de Eventos de Ondas de Calor por Ano e Cidade (1981-{YEAR_MAX})"
             cb_title = "Nº de Eventos"
             cscale = "Oranges"
         else:
             data_hm = data_processor.prepare_heatmap_data()
             is_dias = True
             is_ev = False
-            title = "Frequência de Dias de Ondas de Calor por Ano e Cidade (1981-2023)"
+            title = f"Frequência de Dias de Ondas de Calor por Ano e Cidade (1981-{YEAR_MAX})"
             cb_title = "Nº de Dias"
             cscale = "Reds"
 

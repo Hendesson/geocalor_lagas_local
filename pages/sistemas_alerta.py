@@ -13,7 +13,7 @@ import dash_leaflet as dl
 from dash_extensions.javascript import Namespace
 import plotly.graph_objs as go
 
-from config import LAYOUT_BASE, PRIMARY, TEAL, GREEN, ORANGE, GRID_COLOR
+from config import LAYOUT_BASE, PRIMARY, TEAL, GREEN, ORANGE, GRID_COLOR, CARTO_TILE_URL, CARTO_ATTRIBUTION
 from components import chart_card, dl_btn
 
 _NUM_INFOGRAFICOS = 20
@@ -47,7 +47,7 @@ def build_mapa_protocolos() -> str:
         return _mapa_protocolos_html
 
     m = folium.Map(location=[20, 10], zoom_start=2,
-                   tiles="CartoDB positron")
+                   tiles=CARTO_TILE_URL, attr=CARTO_ATTRIBUTION)
 
     if os.path.exists(_GEOJSON_PROTOCOLOS):
         with open(_GEOJSON_PROTOCOLOS, encoding="utf-8") as f:
@@ -547,8 +547,8 @@ def layout_sistemas_alerta(app) -> dbc.Container:
                                 dl.Map(
                                     [
                                         dl.TileLayer(
-                                            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+                                            url=CARTO_TILE_URL,
+                                            attribution=CARTO_ATTRIBUTION,
                                             maxZoom=19,
                                         ),
                                         _geojson_paises(geo_url),
