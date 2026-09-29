@@ -34,7 +34,6 @@ body, .app-container, .dash-bootstrap {
     flex: 1;
     background: #fff;
     border: 1px solid var(--color-card-border);
-    border-top-width: 3px;
     box-shadow: var(--shadow-card);
 }
 .kpi-card:hover { transform: none; }
@@ -42,15 +41,12 @@ body, .app-container, .dash-bootstrap {
 .kpi-value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; color: var(--color-text); }
 .kpi-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.15rem; text-align: center; font-variant-numeric: tabular-nums; color: var(--color-muted); }
 
-.kpi-teal   { border-top-color: var(--color-teal); }
+/* Categoria sinalizada só pela cor do ícone+valor — sem faixa de borda
+   redundante (a cor já está no número, não precisa repetir na moldura). */
 .kpi-teal   .kpi-icon, .kpi-teal   .kpi-value { color: var(--color-teal); }
-.kpi-orange { border-top-color: var(--color-orange); }
 .kpi-orange .kpi-icon, .kpi-orange .kpi-value { color: var(--color-orange); }
-.kpi-red    { border-top-color: var(--color-red); }
 .kpi-red    .kpi-icon, .kpi-red    .kpi-value { color: var(--color-red); }
-.kpi-green  { border-top-color: var(--color-green); }
 .kpi-green  .kpi-icon, .kpi-green  .kpi-value { color: #3a9e7c; }
-.kpi-blue   { border-top-color: var(--color-primary); }
 .kpi-blue   .kpi-icon, .kpi-blue   .kpi-value { color: var(--color-primary); }
 
 /* ── Chart Card (geo-map-section-header já existia, aqui adicionamos o body) */
@@ -67,6 +63,7 @@ body, .app-container, .dash-bootstrap {
 h3 {
     color: #1761a0;
     font-weight: 700;
+    font-size: 1.5rem;
     display: block;
     padding-bottom: 6px;
     margin-bottom: 18px;
@@ -75,7 +72,7 @@ h3 {
 h4 {
     color: #1761a0;
     font-weight: 600;
-    font-size: 1.05rem;
+    font-size: 1.2rem;
     margin-bottom: 12px;
 }
 h5 {
@@ -170,8 +167,24 @@ h5 {
     margin-bottom: 0;
 }
 
+/* Bloco informativo sem borda/sombra — ver components/cards.py:info_card().
+   Diferenciado do conteúdo (gráficos/mapas) só por tinta de fundo e recuo,
+   não por moldura, pra não competir visualmente com o que é o produto. */
+.info-card {
+    background: rgba(234, 246, 251, 0.55);
+    border-radius: var(--radius-card);
+    padding-left: 1.25rem !important;
+}
+
+.filter-bar-wrap {
+    border-bottom: 1px solid var(--color-card-border);
+}
+
 .geo-map-section-header {
-    background: #fff;
+    /* Categoria pela cor do fundo (não por uma linha de borda fina + canto
+       arredondado — o .chart-card pai já recorta os cantos via overflow:hidden,
+       então o header nem precisa do próprio border-radius). */
+    background: rgba(23, 97, 160, 0.07);
     color: var(--color-primary) !important;
     font-size: 0.72rem;
     font-weight: 700;
@@ -186,16 +199,18 @@ h5 {
     gap: 0.4rem;
     border: none !important;
     box-shadow: none !important;
-    border-bottom: 2px solid var(--color-primary) !important;
-    border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
 }
 .geo-header-orange {
-    color: #c47a18 !important;
-    border-bottom-color: #c47a18 !important;
+    background: rgba(196, 122, 24, 0.09);
+    color: #a3630f !important;
 }
 .geo-header-teal {
-    color: #2b9eb3 !important;
-    border-bottom-color: #2b9eb3 !important;
+    background: rgba(26, 122, 138, 0.09);
+    color: #1a7a8a !important;
+}
+.geo-header-red {
+    background: rgba(220, 47, 61, 0.08);
+    color: #b81f2c !important;
 }
 
 .btn-primary, .btn-outline-primary {
@@ -379,6 +394,10 @@ h5 {
     font-weight: bold;
 }
 
+/* Abreviação de intensidade (BI/S/E) dentro do dia do calendário — tamanho
+   mínimo pensado pra legibilidade, não só pra caber no círculo. */
+.calendar-day-abbr { font-size: 0.72rem; }
+
 .heat-wave:hover {
     filter: brightness(0.9);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -504,11 +523,11 @@ h5 {
 @media (max-width: 767px) {
 
     h3 {
-        font-size: 1rem !important;
+        font-size: 1.2rem !important;
         word-break: break-word;
     }
-    h4 { font-size: 0.95rem !important; word-break: break-word; }
-    h5 { font-size: 0.9rem !important; word-break: break-word; }
+    h4 { font-size: 0.98rem !important; word-break: break-word; }
+    h5 { font-size: 0.8rem !important; word-break: break-word; }
     h2 { font-size: 1.25rem !important; }
 
     /* Navbar collapse: maior espaçamento interno */
@@ -561,6 +580,7 @@ h5 {
 
     /* Calendário: dias menores para caber na tela */
     .calendar-day { width: 34px !important; height: 34px !important; font-size: 0.75rem; margin: 1px; }
+    .calendar-day-abbr { font-size: 0.68rem; }
     .calendar-weekday { font-size: 0.7rem; }
     .calendar-header  { font-size: 0.85rem; }
 
@@ -627,17 +647,20 @@ h5 {
     /* Calendário: 2 meses por linha forçado */
     .calendar-container .row > div { padding-left: 0.2rem !important; padding-right: 0.2rem !important; }
     .calendar-day { width: 30px !important; height: 30px !important; font-size: 0.68rem; }
+    .calendar-day-abbr { font-size: 0.64rem; }
 }
 
 /* ── Mobile muito pequeno (≤400px) ────────────────────────────────────────── */
 @media (max-width: 400px) {
-    h3, h4 { font-size: 0.9rem !important; }
-    h5 { font-size: 0.85rem !important; }
+    h3 { font-size: 0.95rem !important; }
+    h4 { font-size: 0.8rem !important; }
+    h5 { font-size: 0.68rem !important; }
     .kpi-card   { min-width: calc(48% - 0.2rem); }
     .kpi-value  { font-size: 1.05rem; }
     .geo-map-section-header { padding: 0.45rem 0.6rem; }
     .team-card  { width: 200px !important; }
     .calendar-day { width: 27px !important; height: 27px !important; font-size: 0.62rem; }
+    .calendar-day-abbr { font-size: 0.6rem; }
 }
 
 /* ── Dropdowns Dash: menu não cortado por card/container ────────────────── */
@@ -839,7 +862,8 @@ h5 {
 }
 /* ── Mobile mínimo (≤320px) ────────────────────────────────────────────── */
 @media (max-width: 320px) {
-    .calendar-day { width: 23px !important; height: 23px !important; font-size: 0.55rem; margin: 1px; }
+    .calendar-day { width: 26px !important; height: 26px !important; font-size: 0.58rem; margin: 1px; }
+    .calendar-day-abbr { font-size: 0.56rem; }
     .kpi-card { min-width: 100% !important; max-width: 100% !important; flex: 1 1 100% !important; }
     .geo-map-section-header { font-size: 0.72rem !important; padding: 0.45rem 0.75rem !important; }
     .kpi-value { font-size: 0.95rem; }
