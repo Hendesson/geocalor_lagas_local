@@ -5,9 +5,40 @@ import pandas as pd
 import numpy as np
 import logging
 
-from config import PRIMARY, TEAL, GREEN, ORANGE, RED, GRID_COLOR, LAYOUT_BASE, WHITE
+from config import PRIMARY, TEAL, GREEN, ORANGE, RED, DARK_RED, GRID_COLOR, LAYOUT_BASE, WHITE, YEAR_MAX
 
 logger = logging.getLogger(__name__)
+
+# Mesma cor por intensidade em todo o dashboard (calendário de ondas de calor,
+# gráficos de temperatura/umidade) — a intensidade nunca deve depender só de
+# opacidade, que é difícil de distinguir e falha o requisito de acessibilidade
+# do projeto (ver pages/ondas.py INTENSITY_COLOR).
+_INTENSITY_COLOR = {
+    "low-intensity": ORANGE, "low intensity": ORANGE,
+    "severe": RED,
+    "extreme": DARK_RED,
+}
+_INTENSITY_LABEL = {
+    "low-intensity": "Baixa Intensidade", "low intensity": "Baixa Intensidade",
+    "severe": "Severa",
+    "extreme": "Extrema",
+}
+
+
+def _intensity_legend_traces():
+    """Marcadores invisíveis só para dar entrada de legenda às 3 cores de intensidade."""
+    return [
+        go.Scatter(
+            x=[None], y=[None], mode="markers",
+            marker=dict(size=10, color=color, symbol="square"),
+            name=label, showlegend=True,
+        )
+        for label, color in (
+            ("Baixa Intensidade", ORANGE),
+            ("Severa", RED),
+            ("Extrema", DARK_RED),
+        )
+    ]
 
 
 class Visualizer:
@@ -77,7 +108,7 @@ class Visualizer:
 
         fig.update_layout(
             **self._layout_temp_padrao(
-                f"Temperaturas diárias — {cidade} ({ano_inicio}–{ano_fim})"
+                f"Temperaturas diárias: {cidade} ({ano_inicio}–{ano_fim})"
             ),
             xaxis_title="Data",
             yaxis_title="Temperatura (°C)",
@@ -142,9 +173,9 @@ class Visualizer:
 
         title = f"Frequência de Ondas de Calor em {cidade}"
         if ano is not None:
-            title += f" — {ano}"
+            title += f" ({ano})"
         else:
-            title += " (1981 - 2023)"
+            title += f" (1981 - {YEAR_MAX})"
 
         fig.update_layout(
             title=title,
@@ -206,7 +237,7 @@ class Visualizer:
         ))
         fig.update_layout(
             **self._layout_temp_padrao(
-                f"Umidade média mensal — {cidade} ({ano_inicio}–{ano_fim})", height=380
+                f"Umidade média mensal: {cidade} ({ano_inicio}–{ano_fim})", height=380
             ),
         )
         fig.update_xaxes(
@@ -259,7 +290,7 @@ class Visualizer:
         ))
         fig.update_layout(
             **self._layout_temp_padrao(
-                f"Amplitude térmica diária — {cidade} ({ano_inicio}–{ano_fim})", height=400
+                f"Amplitude térmica diária: {cidade} ({ano_inicio}–{ano_fim})", height=400
             ),
             xaxis_title="Data",
             yaxis_title="Amplitude (°C)",
@@ -329,7 +360,7 @@ class Visualizer:
         fig.add_hline(y=0, line_dash="solid", line_color=PRIMARY, line_width=1.2, opacity=0.45)
         fig.update_layout(
             **self._layout_temp_padrao(
-                f"Anomalia de temperatura média mensal — {cidade} ({ano_inicio}–{ano_fim})",
+                f"Anomalia de temperatura média mensal: {cidade} ({ano_inicio}–{ano_fim})",
                 height=chart_h,
             ),
             showlegend=False,
@@ -368,37 +399,42 @@ class Visualizer:
         fig.add_trace(go.Scatter(x=dff["index"], y=dff["tempMin"], mode="lines+markers",
                                  name="Mínima", line=dict(color=TEAL), marker=dict(size=4)))
 
-        _intensity_opacity = {"low-intensity": 0.4, "severe": 0.6, "extreme": 0.8}
         threshold_95 = dff["tempMax"].quantile(0.95) if not dff["tempMax"].empty else None
         half_day = pd.Timedelta(days=0.5)
 
         _isHW_mask = (dff["isHW"] == "TRUE") | (dff["isHW"] == True)
         hw_df    = dff[_isHW_mask]
-        opacities = hw_df["HW_Intensity"].fillna("").astype(str).str.strip().str.lower().map(_intensity_opacity).fillna(0.3)
+        intensity_keys = hw_df["HW_Intensity"].fillna("").astype(str).str.strip().str.lower()
+        colors = intensity_keys.map(_INTENSITY_COLOR).fillna(ORANGE)
+        # Intensidade codificada por cor (Laranja/Vermelho/Vermelho-escuro), não por
+        # opacidade — opacidade sozinha não é distinguível o bastante (ver _INTENSITY_COLOR).
         shapes = [
             {
                 "type": "rect", "xref": "x", "yref": "paper",
                 "x0": idx - half_day, "x1": idx + half_day,
                 "y0": 0, "y1": 1,
-                "fillcolor": ORANGE, "opacity": float(op),
+                "fillcolor": color, "opacity": 0.3,
                 "line": {"width": 0}, "layer": "below",
             }
-            for idx, op in zip(hw_df["index"], opacities)
+            for idx, color in zip(hw_df["index"], colors)
         ]
+        for tr in _intensity_legend_traces():
+            fig.add_trace(tr)
         # Uma anotação por evento OC (primeiro dia) para evitar sobreposição
         ann_df = hw_df[hw_df["HWDay_Intensity"].notna()]
         if "group" in ann_df.columns:
             ann_df = ann_df.sort_values("index").groupby("group", sort=False).first().reset_index(drop=True)
+        ann_colors = ann_df["HWDay_Intensity"].fillna("").astype(str).str.strip().str.lower().map(_INTENSITY_COLOR).fillna(ORANGE)
         hw_annotations = [
             {
                 "x": idx, "y": 1.02, "xref": "x", "yref": "paper",
                 "text": str(txt), "showarrow": False,
-                "bgcolor": "rgba(255,159,28,0.6)", "bordercolor": ORANGE,
+                "bgcolor": color, "bordercolor": color,
                 "borderwidth": 1, "borderpad": 2,
                 "font": {"color": "white", "size": 9},
                 "xanchor": "center", "yanchor": "bottom",
             }
-            for idx, txt in zip(ann_df["index"], ann_df["HWDay_Intensity"])
+            for idx, txt, color in zip(ann_df["index"], ann_df["HWDay_Intensity"], ann_colors)
         ]
         if threshold_95 is not None:
             # Limita a 5 picos para evitar anotações sobrepostas
@@ -418,7 +454,7 @@ class Visualizer:
             peak_annotations = []
 
         fig.update_layout(
-            title=f"Temperaturas Diárias e Ondas de Calor — {cidade}, {ano}",
+            title=f"Temperaturas Diárias e Ondas de Calor: {cidade}, {ano}",
             xaxis_title="Data", yaxis_title="Temperatura (°C)",
             plot_bgcolor=WHITE, paper_bgcolor=WHITE,
             hovermode="x unified",
@@ -445,37 +481,39 @@ class Visualizer:
             name="Umidade Média", line=dict(color=TEAL), marker=dict(size=4),
         ))
 
-        _intensity_opacity = {"low-intensity": 0.4, "severe": 0.6, "extreme": 0.8}
         half_day = pd.Timedelta(days=0.5)
 
         _isHW_mask2 = (dff["isHW"] == "TRUE") | (dff["isHW"] == True)
         hw_df     = dff[_isHW_mask2]
-        opacities = hw_df["HW_Intensity"].fillna("").astype(str).str.strip().str.lower().map(_intensity_opacity).fillna(0.3)
+        colors2 = hw_df["HW_Intensity"].fillna("").astype(str).str.strip().str.lower().map(_INTENSITY_COLOR).fillna(ORANGE)
         shapes = [
             {
                 "type": "rect", "xref": "x", "yref": "paper",
                 "x0": idx - half_day, "x1": idx + half_day,
                 "y0": 0, "y1": 1,
-                "fillcolor": ORANGE, "opacity": float(op),
+                "fillcolor": color, "opacity": 0.3,
                 "line": {"width": 0}, "layer": "below",
             }
-            for idx, op in zip(hw_df["index"], opacities)
+            for idx, color in zip(hw_df["index"], colors2)
         ]
+        for tr in _intensity_legend_traces():
+            fig.add_trace(tr)
         ann_df = hw_df[hw_df["HWDay_Intensity"].notna()]
+        ann_colors2 = ann_df["HWDay_Intensity"].fillna("").astype(str).str.strip().str.lower().map(_INTENSITY_COLOR).fillna(ORANGE)
         hw_annotations = [
             {
                 "x": idx, "y": 1.02, "xref": "x", "yref": "paper",
                 "text": str(txt), "showarrow": False,
-                "bgcolor": "rgba(255,159,28,0.6)", "bordercolor": ORANGE,
+                "bgcolor": color, "bordercolor": color,
                 "borderwidth": 1, "borderpad": 2,
                 "font": {"color": "white", "size": 9},
                 "xanchor": "center", "yanchor": "bottom",
             }
-            for idx, txt in zip(ann_df["index"], ann_df["HWDay_Intensity"])
+            for idx, txt, color in zip(ann_df["index"], ann_df["HWDay_Intensity"], ann_colors2)
         ]
 
         fig.update_layout(
-            title=f"Umidade Diária e Ondas de Calor — {cidade}, {ano}",
+            title=f"Umidade Diária e Ondas de Calor: {cidade}, {ano}",
             xaxis_title="Data", yaxis_title="Umidade Relativa (%)",
             plot_bgcolor=WHITE, paper_bgcolor=WHITE,
             hovermode="x unified",

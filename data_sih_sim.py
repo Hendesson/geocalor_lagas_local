@@ -152,6 +152,15 @@ def _filter_rm(df: pd.DataFrame, rm: str) -> pd.DataFrame:
     return df[df["NOME_RM"] == rm]
 
 
+def _filter_periodo(df: pd.DataFrame, ano_col: str, periodo: Optional[tuple]) -> pd.DataFrame:
+    """Filtra por intervalo de anos [ano_min, ano_max] (inclusivo). periodo=None → sem filtro."""
+    if periodo is None or df.empty or ano_col not in df.columns:
+        return df
+    ano_min, ano_max = periodo
+    anos = pd.to_numeric(df[ano_col], errors="coerce")
+    return df[(anos >= ano_min) & (anos <= ano_max)]
+
+
 def _add_pct(df: pd.DataFrame, n_col: str = "N") -> pd.DataFrame:
     total = df[n_col].sum()
     df["pct"] = df[n_col] * 100.0 / total if total > 0 else 0.0
@@ -204,22 +213,23 @@ def anos_disponiveis(sistema: str, causa: str, rm: str) -> List[int]:
     return sorted(dff[ano_col].dropna().unique().astype(int).tolist())
 
 
-def serie_mensal(sistema: str, causa: str, rm: str) -> pd.DataFrame:
+def serie_mensal(sistema: str, causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Retorna serie temporal mensal: colunas NOME_RM, ANO_*, MES_*, N."""
-    key = ("serie_mensal", sistema, causa, rm)
+    key = ("serie_mensal", sistema, causa, rm, periodo)
     if key not in _df_agg_cache:
         df = _load(f"{_prefix(sistema, causa)}_serie_mensal.parquet")
-        _df_agg_cache[key] = _filter_rm(df, rm)
+        dff = _filter_rm(df, rm)
+        _df_agg_cache[key] = _filter_periodo(dff, _ANO_COL[sistema], periodo)
     return _df_agg_cache[key]
 
 
-def serie_mensal_taxa(sistema: str, causa: str, rm: str) -> pd.DataFrame:
+def serie_mensal_taxa(sistema: str, causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Taxa mensal por 10.000 hab.: (ANO_*, MES_*, N, taxa). taxa=NaN se pop indisponível."""
-    key = ("serie_mensal_taxa", sistema, causa, rm)
+    key = ("serie_mensal_taxa", sistema, causa, rm, periodo)
     if key in _df_agg_cache:
         return _df_agg_cache[key]
 
-    df_serie = serie_mensal(sistema, causa, rm)
+    df_serie = serie_mensal(sistema, causa, rm, periodo)
     ano_col  = _ANO_COL[sistema]
     mes_col  = _MES_COL[sistema]
     if df_serie.empty:
@@ -256,14 +266,15 @@ def serie_mensal_taxa(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     return _df_agg_cache[key]
 
 
-def taxa_anual(sistema: str, causa: str, rm: str) -> pd.DataFrame:
+def taxa_anual(sistema: str, causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Taxa anual por 1.000 hab.: (ANO_*, N, taxa). taxa=NaN se pop indisponível."""
-    key = ("taxa_anual", sistema, causa, rm)
+    key = ("taxa_anual", sistema, causa, rm, periodo)
     if key in _df_agg_cache:
         return _df_agg_cache[key]
     df = _load(f"{_prefix(sistema, causa)}_taxa_anual.parquet")
     ano_col = _ANO_COL[sistema]
     dff = _filter_rm(df, rm)
+    dff = _filter_periodo(dff, ano_col, periodo)
     if dff.empty or ano_col not in dff.columns:
         return pd.DataFrame(columns=[ano_col, "N", "taxa"])
 
@@ -299,13 +310,14 @@ def taxa_anual(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     return result
 
 
-def sexo_por_ano(sistema: str, causa: str, rm: str) -> pd.DataFrame:
+def sexo_por_ano(sistema: str, causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Contagem por sexo e ano: (ANO_*, SEXO, N)."""
-    key = ("sexo_por_ano", sistema, causa, rm)
+    key = ("sexo_por_ano", sistema, causa, rm, periodo)
     if key not in _df_agg_cache:
         df = _load(f"{_prefix(sistema, causa)}_sexo_ano.parquet")
         ano_col = _ANO_COL[sistema]
         dff = _filter_rm(df, rm)
+        dff = _filter_periodo(dff, ano_col, periodo)
         if dff.empty or "SEXO" not in dff.columns:
             _df_agg_cache[key] = pd.DataFrame(columns=[ano_col, "SEXO", "N"])
         else:
@@ -313,12 +325,13 @@ def sexo_por_ano(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     return _df_agg_cache[key]
 
 
-def sexo_por_faixa(sistema: str, causa: str, rm: str) -> pd.DataFrame:
+def sexo_por_faixa(sistema: str, causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Contagem por sexo e faixa etária para pirâmide: (SEXO, FAIXA_ETARIA, N)."""
-    key = ("sexo_por_faixa", sistema, causa, rm)
+    key = ("sexo_por_faixa", sistema, causa, rm, periodo)
     if key not in _df_agg_cache:
         df = _load(f"{_prefix(sistema, causa)}_sexo_faixa.parquet")
         dff = _filter_rm(df, rm)
+        dff = _filter_periodo(dff, _ANO_COL[sistema], periodo)
         if dff.empty or "SEXO" not in dff.columns or "FAIXA_ETARIA" not in dff.columns:
             _df_agg_cache[key] = pd.DataFrame(columns=["SEXO", "FAIXA_ETARIA", "N"])
         else:
@@ -328,12 +341,13 @@ def sexo_por_faixa(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     return _df_agg_cache[key]
 
 
-def raca_cor(sistema: str, causa: str, rm: str) -> pd.DataFrame:
+def raca_cor(sistema: str, causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Distribuição por raça/cor: (RACA_COR, N, pct)."""
-    key = ("raca_cor", sistema, causa, rm)
+    key = ("raca_cor", sistema, causa, rm, periodo)
     if key not in _df_agg_cache:
         df = _load(f"{_prefix(sistema, causa)}_raca.parquet")
-        dff = _filter_rm(df, rm).copy()
+        dff = _filter_rm(df, rm)
+        dff = _filter_periodo(dff, _ANO_COL[sistema], periodo).copy()
         if dff.empty:
             _df_agg_cache[key] = pd.DataFrame(columns=["RACA_COR", "N", "pct"])
         else:
@@ -343,12 +357,13 @@ def raca_cor(sistema: str, causa: str, rm: str) -> pd.DataFrame:
     return _df_agg_cache[key]
 
 
-def faixa_etaria(sistema: str, causa: str, rm: str) -> pd.DataFrame:
+def faixa_etaria(sistema: str, causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Distribuição por faixa etária: (FAIXA_ETARIA, N, pct)."""
-    key = ("faixa_etaria", sistema, causa, rm)
+    key = ("faixa_etaria", sistema, causa, rm, periodo)
     if key not in _df_agg_cache:
         df = _load(f"{_prefix(sistema, causa)}_faixa_etaria.parquet")
         dff = _filter_rm(df, rm)
+        dff = _filter_periodo(dff, _ANO_COL[sistema], periodo)
         if dff.empty:
             _df_agg_cache[key] = pd.DataFrame(columns=["FAIXA_ETARIA", "N", "pct"])
         else:
@@ -364,12 +379,13 @@ def faixa_etaria(sistema: str, causa: str, rm: str) -> pd.DataFrame:
 
 # ── SIH-específico ──────────────────────────────────────────────────────────
 
-def car_int(causa: str, rm: str) -> pd.DataFrame:
+def car_int(causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Caráter de internação: (CAR_INT, N, pct)."""
-    key = ("car_int", causa, rm)
+    key = ("car_int", causa, rm, periodo)
     if key not in _df_agg_cache:
         df = _load(f"sih_{causa.lower()}_car_int.parquet")
         dff = _filter_rm(df, rm)
+        dff = _filter_periodo(dff, _ANO_COL["SIH"], periodo)
         if dff.empty:
             _df_agg_cache[key] = pd.DataFrame(columns=["CAR_INT", "N", "pct"])
         else:
@@ -378,12 +394,13 @@ def car_int(causa: str, rm: str) -> pd.DataFrame:
     return _df_agg_cache[key]
 
 
-def espec(causa: str, rm: str) -> pd.DataFrame:
+def espec(causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Especialidade do leito — top 12: (ESPEC, N, pct)."""
-    key = ("espec", causa, rm)
+    key = ("espec", causa, rm, periodo)
     if key not in _df_agg_cache:
         df = _load(f"sih_{causa.lower()}_espec.parquet")
         dff = _filter_rm(df, rm)
+        dff = _filter_periodo(dff, _ANO_COL["SIH"], periodo)
         if dff.empty:
             _df_agg_cache[key] = pd.DataFrame(columns=["ESPEC", "N", "pct"])
         else:
@@ -394,12 +411,13 @@ def espec(causa: str, rm: str) -> pd.DataFrame:
 
 # ── SIM-específico ──────────────────────────────────────────────────────────
 
-def lococor(causa: str, rm: str) -> pd.DataFrame:
+def lococor(causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Local do óbito: (LOCOCOR, N, pct)."""
-    key = ("lococor", causa, rm)
+    key = ("lococor", causa, rm, periodo)
     if key not in _df_agg_cache:
         df = _load(f"sim_{causa.lower()}_lococor.parquet")
-        dff = _filter_rm(df, rm).copy()
+        dff = _filter_rm(df, rm)
+        dff = _filter_periodo(dff, _ANO_COL["SIM"], periodo).copy()
         if dff.empty:
             _df_agg_cache[key] = pd.DataFrame(columns=["LOCOCOR", "N", "pct"])
         else:
@@ -409,12 +427,13 @@ def lococor(causa: str, rm: str) -> pd.DataFrame:
     return _df_agg_cache[key]
 
 
-def estciv(causa: str, rm: str) -> pd.DataFrame:
+def estciv(causa: str, rm: str, periodo: Optional[tuple] = None) -> pd.DataFrame:
     """Estado civil: (ESTCIV, N, pct)."""
-    key = ("estciv", causa, rm)
+    key = ("estciv", causa, rm, periodo)
     if key not in _df_agg_cache:
         df = _load(f"sim_{causa.lower()}_estciv.parquet")
-        dff = _filter_rm(df, rm).copy()
+        dff = _filter_rm(df, rm)
+        dff = _filter_periodo(dff, _ANO_COL["SIM"], periodo).copy()
         if dff.empty:
             _df_agg_cache[key] = pd.DataFrame(columns=["ESTCIV", "N", "pct"])
         else:
@@ -506,8 +525,7 @@ def _geojson_for_rm(rm: str) -> Optional[dict]:
                     lats += [p[1] for p in ring]
         lat_c = float(np.mean(lats)) if lats else -15.0
         lon_c = float(np.mean(lons)) if lons else -50.0
-    except Exception as e:
-        logger.warning("Erro ao calcular centro geográfico para RM '%s': %s", rm, e)
+    except Exception:
         lat_c, lon_c = -15.0, -50.0
 
     all_codes = [feat["id"] for feat in features_rm]

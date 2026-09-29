@@ -41,4 +41,18 @@ GRID_COLOR = "rgba(23, 97, 160, 0.10)"
 
 # ── Limites de dados ───────────────────────────────────────────────────────
 YEAR_MIN = 1981
-YEAR_MAX = 2023
+YEAR_MAX = 2025
+
+# Exibido na navbar — atualize manualmente a cada nova carga de dados
+# (climático, SIH ou SIM).
+ULTIMA_ATUALIZACAO = "setembro/2026"
+
+# Chave de basemap raster da CARTO (mapas de pages/sistemas_alerta.py) —
+# conta gratuita, até 5.000.000 requisições de tile/mês. Ver e-mail da CARTO
+# em carto.com/basemaps/apikey pra gerenciar/revogar.
+CARTO_API_KEY = "cb1_3tnf_1_1c05317fa1d6cb87af6b55e8"
+CARTO_TILE_URL = f"https://basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}.png?key={CARTO_API_KEY}"
+CARTO_ATTRIBUTION = (
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> '
+    'contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+)

@@ -5,6 +5,7 @@ import os
 import logging
 from typing import List, Dict, Optional, Tuple
 from cache_manager import cache_manager, cached_dataframe
+from config import YEAR_MAX
 from config_paths import BASE_DIR, DATA_DIR, PROCESSED_DIR
 from db import get_conn, execute as db_execute, table_ref
 
@@ -104,7 +105,7 @@ class DataProcessor:
             if df is None:
                 logger.info("Carregando dados via DuckDB…")
                 df = db_execute(
-                    f"SELECT * FROM {table_ref('clima')} WHERE year <= 2023"
+                    f"SELECT * FROM {table_ref('clima')} WHERE year <= {YEAR_MAX}"
                 ).df()
                 logger.info(f"Dados lidos via DuckDB. Shape: {df.shape}")
             
@@ -171,13 +172,16 @@ class DataProcessor:
                 df = df[df["year"].notna()]
                 logger.info("Coluna 'year' garantida como inteiro (sem NaN)")
             
-            # Filtrar dados até 2023 (se year existir)
+            # Filtrar dados até 2025 (se year existir) -- 2026 fica de fora
+            # por estar incompleto (só os primeiros dias de janeiro). Dentro
+            # de 2025, Recife não tem nenhum dado e Salvador só até julho —
+            # lacunas reais da fonte, não um bug deste filtro.
             if "year" in df.columns:
                 antes = len(df)
-                df = df[df["year"] <= 2023]
+                df = df[df["year"] <= 2025]
                 depois = len(df)
                 if antes != depois:
-                    logger.info(f"Filtrados dados: {antes} -> {depois} linhas (apenas até 2023)")
+                    logger.info(f"Filtrados dados: {antes} -> {depois} linhas (apenas até 2025)")
             
             self.df = df
             
@@ -206,6 +210,20 @@ class DataProcessor:
             logger.error(f"Erro ao carregar dados: {str(e)}")
             logger.exception("Detalhes do erro:")
             return pd.DataFrame()
+
+    def _normalize_isHW(self, series: pd.Series) -> pd.Series:
+        """
+        Normaliza a coluna isHW para garantir comparações corretas.
+        Converte para string uppercase e trata todos os casos possíveis.
+        """
+        if series.dtype == 'bool':
+            return series.map({True: "TRUE", False: "FALSE"}).astype(str)
+        elif series.dtype in ['int64', 'int32', 'float64', 'float32']:
+            return series.map({1: "TRUE", 1.0: "TRUE", 0: "FALSE", 0.0: "FALSE"}).fillna("FALSE").astype(str)
+        else:
+            normalized = series.astype(str).str.upper().str.strip()
+            normalized = normalized.replace(["", "nan", "NAN", "NONE", "NULL"], "FALSE")
+            return normalized
 
     @cached_dataframe(key_prefix="hw_monthly")
     def calculate_hw_monthly(self, cidade: str, ano: int) -> pd.DataFrame:  # noqa: C901
@@ -361,12 +379,12 @@ class DataProcessor:
                 SELECT cidade, year, COUNT(*) AS count
                 FROM {table_ref('clima')}
                 WHERE UPPER(TRIM(CAST(isHW AS VARCHAR))) = 'TRUE'
-                  AND year BETWEEN 1981 AND 2023
+                  AND year BETWEEN 1981 AND {YEAR_MAX}
                 GROUP BY cidade, year
             """).df()
 
             all_combinations = pd.MultiIndex.from_product(
-                [self.cidades, list(range(1981, 2024))],
+                [self.cidades, list(range(1981, YEAR_MAX + 1))],
                 names=["cidade", "year"],
             ).to_frame(index=False)
 
@@ -444,11 +462,20 @@ class DataProcessor:
         # Identifica os grupos que correspondem a eventos (duração >= 3)
         event_groups = sequence_durations[sequence_durations['duration'] >= 3][['cidade', '_temp_group']].copy()
 
-        # Marca dias que pertencem a grupos de evento via MultiIndex isin (mais rápido que merge)
-        event_idx = pd.MultiIndex.from_frame(event_groups[['cidade', '_temp_group']])
-        df_keys   = pd.MultiIndex.from_arrays([df_copy['cidade'], df_copy['_temp_group']])
-        df_copy['is_event'] = df_keys.isin(event_idx)
-        df_copy = df_copy.drop(columns=['_temp_group'])
+        # Marca os dias que fazem parte de eventos de onda de calor
+        df_copy['is_event'] = False
+        
+        # Merge com event_groups para marcar os dias que estão nos grupos válidos
+        df_copy = pd.merge(
+            df_copy.reset_index(drop=True), 
+            event_groups.reset_index(drop=True), 
+            on=['cidade', '_temp_group'], 
+            how='left', 
+            indicator=True
+        )
+        
+        df_copy['is_event'] = df_copy['_merge'] == 'both'
+        df_copy = df_copy.drop(columns=['_merge', '_temp_group'])
 
         # Identifica o início de cada evento (primeiro dia de cada sequência válida)
         df_copy['event_start'] = df_copy.groupby('cidade')['is_event'].transform(
@@ -460,7 +487,7 @@ class DataProcessor:
 
         # Preenche combinações de cidade/ano sem eventos com 0
         all_combinations = pd.MultiIndex.from_product(
-            [self.cidades, list(range(1981, 2024))],
+            [self.cidades, list(range(1981, YEAR_MAX + 1))],
             names=['cidade', 'year']
         ).to_frame(index=False)
 

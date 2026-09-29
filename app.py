@@ -11,6 +11,7 @@ import dash_bootstrap_components as dbc
 import flask
 import pandas as pd
 
+from config import ULTIMA_ATUALIZACAO
 from data_processing import DataProcessor
 from visualization import Visualizer
 from db import execute as db_execute
@@ -157,6 +158,16 @@ def build_navbar(app_dash: dash.Dash) -> dbc.Navbar:
         )
         for entry in PAGE_ENTRIES
     ]
+    nav_links.append(
+        dbc.NavItem(
+            html.Span(
+                [html.I(className="fas fa-sync-alt me-1"), f"Atualizado em {ULTIMA_ATUALIZACAO}"],
+                className="navbar-updated-badge text-white-50 small d-block",
+                title="Data da última atualização dos dados climáticos, SIH e SIM",
+            ),
+            className="d-flex align-items-center ms-lg-3 mt-2 mt-lg-0",
+        )
+    )
     return dbc.Navbar(
         dbc.Container(
             [
@@ -263,6 +274,17 @@ def nota_tecnica_mortalidade():
 @server.route("/nota-tecnica-sistemas-alerta")
 def nota_tecnica_sistemas_alerta():
     return NOTA_SISTEMAS_ALERTA_LINKS
+
+
+@server.route("/nota-tecnica-atualizacao-2025")
+def nota_tecnica_atualizacao_2025():
+    # Gerada por scripts/gerar_nota_2024_2025.py a partir dos dados processados
+    caminho = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nota_tecnica_2024_2025.html")
+    if not os.path.exists(caminho):
+        return _MAPA_INDISPONIVEL.replace("Mapa não disponível.", "Nota técnica não gerada.").replace(
+            "Coloque o arquivo HTML em <strong>mapa_eventos/</strong>.",
+            "Rode <strong>python scripts/gerar_nota_2024_2025.py</strong>.")
+    return flask.send_file(caminho, mimetype="text/html")
 
 
 @server.route("/mapa-protocolos")

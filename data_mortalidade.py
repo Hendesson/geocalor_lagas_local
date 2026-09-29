@@ -105,6 +105,15 @@ def cidades_disponiveis() -> List[str]:
     return sorted(df["Cidade"].dropna().unique().tolist())
 
 
+@lru_cache(maxsize=1)
+def anos_disponiveis() -> tuple:
+    """Intervalo (ano_min, ano_max) de início de onda em toda a base OER."""
+    df = _load_oer()
+    if df.empty or "ano_onda" not in df.columns:
+        return (2000, 2025)
+    return int(df["ano_onda"].min()), int(df["ano_onda"].max())
+
+
 def oer_por_cidade(cidade: str) -> pd.DataFrame:
     df = _load_oer()
     if df.empty:
